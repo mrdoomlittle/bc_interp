@@ -34,7 +34,7 @@ struct bci_t {
 };
 
 typedef mdl_u16_t bci_addr_t;
-typedef mdl_u8_t bci_err_t;
+typedef mdl_i8_t bci_err_t;
 
 mdl_u8_t bci_sizeof(mdl_u8_t);
 bci_err_t bci_init(struct bci_t*);
