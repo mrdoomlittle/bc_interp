@@ -17,21 +17,23 @@ mdl_u8_t code[] = {
 	_bci_add, _bci_w8, 0x7, 0x0, 0x9, 0x0, 0x7, 0x0,// add
 	_bci_jne, 0xF, 0x0,								// jump back to address 15
 	_bci_exit // exit
-};
-*/
+};*/
+/*
+mdl_u8_t code[] = {
+	_bci_exnc, _bci_w8, 0x0, 0x0, 0x0, 0x0, BCI_DR_W8, 0x0,
+	_bci_print, _bci_w8, BCI_DR_W8, 0x0,
+	_bci_exit
+};*/
+
 
 mdl_u8_t *bc = NULL;
 mdl_u16_t pc = 0;
-
-void put_byte(mdl_u8_t __byte) {
-	bc[pc] = __byte;
-}
 
 mdl_u8_t get_byte() {
 	return bc[pc];
 }
 
-void increment_pc() {
+void pc_incr() {
 	pc++;
 }
 
@@ -43,15 +45,8 @@ mdl_u16_t get_pc() {
 	return pc;
 }
 
-void t() {
-	t();
-}
-
 int main(int argc, char const *argv[]) {
-	if (argc < 2) {
-		fprintf(stderr, "bci_exec: error\n");
-		return -1;
-	}
+	if (argc == 2) {
 
 	int fd;
 	if ((fd = open(argv[1], O_RDONLY)) < 0) {
@@ -69,18 +64,18 @@ int main(int argc, char const *argv[]) {
 	read(fd, bc, st.st_size);
 	close(fd);
 
+	}
 	printf("using bytecode interp by mrdoomlittle.\n");
 
 	struct bc_interp_t bc_interp = {
 		.stack_size = 120,
 		.heep_size = 21,
-		.put_byte = &put_byte,
 		.get_byte = &get_byte,
 		.set_pc = &set_pc,
 		.get_pc = &get_pc,
-		.increment_pc = &increment_pc
+		.pc_incr = &pc_incr
 	};
 
 	bci_init(&bc_interp);
-	bci_exec(&bc_interp);
+	bci_exec(&bc_interp, 0x0);
 }
