@@ -32,8 +32,8 @@ void bci_set_act_ind_func(struct bci *__bci, void (*__act_ind_func)()) {
 
 bci_err_t bci_init(struct bci *__bci) {
 	mem_stack = (mdl_u8_t*)malloc(__bci->stack_size);
-	_8xdrm_init(&__bci->_8xdrm, &_get_w8, NULL);
-	set_get_arg(&__bci->_8xdrm, (void*)__bci);
+	_8xdrm_init(&__bci->_8xdrm_, &_get_w8, NULL);
+	set_get_arg(&__bci->_8xdrm_, (void*)__bci);
 	memset(mem_stack, 0xFF, __bci->stack_size);
 	__bci->extern_func = NULL;
 	__bci->act_ind_func = NULL;
@@ -45,7 +45,7 @@ bci_err_t bci_de_init(struct bci *__bci) {
 }
 
 mdl_u8_t static get_wx(struct bci *__bci, mdl_u8_t __w) {
-	return _8xdrm_get_wx(&__bci->_8xdrm, __w);
+	return _8xdrm_get_wx(&__bci->_8xdrm_, __w);
 }
 
 # define get_w4(__bci) get_wx(__bci, 4)

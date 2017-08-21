@@ -50,7 +50,7 @@
 # define _bci_aop_sub 0x2
 # define _bci_aop_div 0x3
 struct bci {
-	struct _8xdrm_t _8xdrm;
+	struct _8xdrm _8xdrm_;
 	mdl_u16_t const stack_size;
 	mdl_u8_t (*get_byte)();
 	void (*set_pc)(mdl_u16_t);
