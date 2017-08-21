@@ -49,7 +49,7 @@
 # define _bci_aop_mul 0x1
 # define _bci_aop_sub 0x2
 # define _bci_aop_div 0x3
-struct bci_t {
+struct bci {
 	struct _8xdrm_t _8xdrm;
 	mdl_u16_t const stack_size;
 	mdl_u8_t (*get_byte)();
@@ -69,9 +69,9 @@ mdl_u8_t is_flag(bcii_flag_t, bcii_flag_t);
 mdl_uint_t bcii_overhead_size();
 mdl_uint_t bcii_sizeof(mdl_u8_t*, bcii_flag_t);
 mdl_u8_t bcit_sizeof(mdl_u8_t);
-bci_err_t bci_init(struct bci_t*);
-bci_err_t bci_de_init(struct bci_t*);
-bci_err_t bci_exec(struct bci_t*, mdl_u16_t);
-void bci_set_extern_func(struct bci_t*, void*(*)(mdl_u8_t, void*));
-void bci_set_act_ind_func(struct bci_t*, void(*)());
+bci_err_t bci_init(struct bci*);
+bci_err_t bci_de_init(struct bci*);
+bci_err_t bci_exec(struct bci*, mdl_u16_t);
+void bci_set_extern_func(struct bci*, void*(*)(mdl_u8_t, void*));
+void bci_set_act_ind_func(struct bci*, void(*)());
 # endif /*__bci__h*/

@@ -134,7 +134,7 @@ int main(int __argc, char const *__argv[]) {
 */
 	bc = code;
 # endif
-	struct bci_t bci = {
+	struct bci _bci = {
 		.stack_size = 120,
 		.get_byte = &get_byte,
 		.set_pc = &set_pc,
@@ -143,10 +143,10 @@ int main(int __argc, char const *__argv[]) {
 	};
 
 	bci_err_t any_err;
-	any_err = bci_init(&bci);
-	bci_set_extern_func(&bci, &test_func);
-	any_err = bci_exec(&bci, 0x0);
-	bci_de_init(&bci);
+	any_err = bci_init(&_bci);
+	bci_set_extern_func(&_bci, &test_func);
+	any_err = bci_exec(&_bci, 0x0);
+	bci_de_init(&_bci);
 
 # ifndef DEBUG_ENABLED
 	free(bc);

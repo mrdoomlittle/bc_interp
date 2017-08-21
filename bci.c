@@ -16,21 +16,21 @@ void static stack_get(mdl_u8_t *__val, mdl_uint_t __bc, bci_addr_t __addr) {
 		*itr = stack_w8_get(__addr+(itr-__val));}
 
 mdl_u8_t static _get_w8(void *__bci) {
-	struct bci_t *bci = (struct bci_t*)__bci;
+	struct bci *_bci = (struct bci*)__bci;
 
-	mdl_u8_t val = bci->get_byte();
-	bci->pc_incr();
+	mdl_u8_t val = _bci->get_byte();
+	_bci->pc_incr();
 	return val;
 }
 
-void bci_set_extern_func(struct bci_t *__bci, void*(*__extern_func)(mdl_u8_t, void*)) {
+void bci_set_extern_func(struct bci *__bci, void*(*__extern_func)(mdl_u8_t, void*)) {
 	__bci->extern_func = __extern_func;
 }
-void bci_set_act_ind_func(struct bci_t *__bci, void (*__act_ind_func)()) {
+void bci_set_act_ind_func(struct bci *__bci, void (*__act_ind_func)()) {
 	__bci->act_ind_func = __act_ind_func;
 }
 
-bci_err_t bci_init(struct bci_t *__bci) {
+bci_err_t bci_init(struct bci *__bci) {
 	mem_stack = (mdl_u8_t*)malloc(__bci->stack_size);
 	_8xdrm_init(&__bci->_8xdrm, &_get_w8, NULL);
 	set_get_arg(&__bci->_8xdrm, (void*)__bci);
@@ -40,28 +40,28 @@ bci_err_t bci_init(struct bci_t *__bci) {
 	return BCI_SUCCESS;
 }
 
-bci_err_t bci_de_init(struct bci_t *__bci) {
+bci_err_t bci_de_init(struct bci *__bci) {
 	free(mem_stack);
 }
 
-mdl_u8_t static get_wx(struct bci_t *__bci, mdl_u8_t __w) {
+mdl_u8_t static get_wx(struct bci *__bci, mdl_u8_t __w) {
 	return _8xdrm_get_wx(&__bci->_8xdrm, __w);
 }
 
 # define get_w4(__bci) get_wx(__bci, 4)
 
-mdl_u8_t static get_w8(struct bci_t *__bci) {
+mdl_u8_t static get_w8(struct bci *__bci) {
 	return get_wx(__bci, 8);
 }
 
-mdl_u16_t static get_w16(struct bci_t *__bci) {
+mdl_u16_t static get_w16(struct bci *__bci) {
 	mdl_u16_t val = 0x0;
 	val = get_w8(__bci);
 	val |= get_w8(__bci) << 8;
 	return val;
 }
 
-void static get(struct bci_t *__bci, mdl_u8_t *__val, mdl_uint_t __bc) {
+void static get(struct bci *__bci, mdl_u8_t *__val, mdl_uint_t __bc) {
 	for (mdl_u8_t *itr = __val; itr != __val+__bc; itr++) *itr = get_w8(__bci);
 }
 
@@ -107,7 +107,7 @@ mdl_uint_t bcii_overhead_size() {
 	return 2;
 }
 
-bci_err_t bci_exec(struct bci_t *__bci, mdl_u16_t __entry_addr) {
+bci_err_t bci_exec(struct bci *__bci, mdl_u16_t __entry_addr) {
 	__bci->set_pc(__entry_addr);
 
 	next:
