@@ -29,59 +29,32 @@ bci_addr_t get_pc() {
 //# define DEBUG_ENABLED
 
 # ifdef DEBUG_ENABLED
-/*
 mdl_u8_t code[] = {
-	_bcii_assign, _bcit_w8, 0x0, 0x0, 0x20,
-	_bcii_assign, _bcit_w8, 0x1, 0x0, 0x5,
-	_bcii_aop, _bci_aop_div, _bcit_w8, _bcit_w8, 0x0, 0x0, 0x1, 0x0, _bcit_w8, 0x0, 0x0,
-	_bcii_mov, _bcit_w8, _bcit_w8, 0x2, 0x0, 0x0, 0x0,
-	_bcii_print, _bcit_w8, 0x2, 0x0,
 	_bcii_exit
-};
-*/
-mdl_u8_t code[] = {
-	_bcii_assign, 0x0, _bcit_w8, 0x0, 0x0, 0x1,
-	_bcii_conv, 0x0, _bcit_w16, _bcit_w8, 0x0, 0x0,
-	_bcii_print, 0x0, _bcit_w16, 0x0, 0x0,
-	_bcii_exit, 0x0
-};
-
-/*
-mdl_uint_t c = 0;
-mdl_u8_t _get_byte(void *__arg) {
-    c++;
-    return code[c-1];
 }
-
-mdl_u8_t o = 0;
-void _put_byte(mdl_u8_t __byte, void *__arg) {
-    code[o++] = __byte;
-}
-*/
 # endif
 
-
-struct arg_t {
+struct m_arg {
 	mdl_u8_t pin_mode, pin_state, pid;
 };
 
 void* test_func(mdl_u8_t __id, void *__arg) {
 	mdl_u8_t static ret_val = 0;
 
-	struct arg_t *arg = (struct arg_t*)__arg;
+	struct m_arg *_m_arg = (struct arg*)__arg;
 
 	switch(__id) {
 		case 0: {
-			printf("pin_mode: %u, pid: %u\n", arg->pin_mode, arg->pid);
+			printf("pin_mode: %u, pid: %u\n", _m_arg->pin_mode, _m_arg->pid);
 
 			break;
 		}
 		case 1: {
-			printf("pin_state: %u, pid: %u\n", arg->pin_state, arg->pid);
+			printf("pin_state: %u, pid: %u\n", _m_arg->pin_state, _m_arg->pid);
 			break;
 		}
 		case 2: {
-			printf("pid: %u\n", arg->pid);
+			printf("pid: %u\n", _m_arg->pid);
 			ret_val = ~ret_val & 0x1;
 			break;
 		}
@@ -89,7 +62,10 @@ void* test_func(mdl_u8_t __id, void *__arg) {
 			printf("delay called\n");
 			usleep((*(mdl_u16_t*)__arg)*1000);
 		break;
- 	}
+		case 4:
+			printf("%s\n", (char*)__arg);
+		break;
+	}
 
 	return (void*)&ret_val;
 }
