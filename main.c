@@ -6,7 +6,7 @@
 # include <stdint.h>
 # include <stdlib.h>
 # include <unistd.h>
-
+# include <time.h>
 mdl_u8_t *bc = NULL;
 bci_addr_t pc = 0;
 
@@ -63,7 +63,8 @@ void* test_func(mdl_u8_t __id, void *__arg) {
 			usleep((*(mdl_u16_t*)__arg)*1000);
 		break;
 		case 4:
-			printf("%s\n", (char*)__arg);
+//			printf("%u\n", *(mdl_u8_t*)__arg);
+			printf("%s", (char*)__arg);
 		break;
 	}
 
@@ -121,7 +122,12 @@ int main(int __argc, char const *__argv[]) {
 	bci_err_t any_err;
 	any_err = bci_init(&_bci);
 	bci_set_extern_func(&_bci, &test_func);
+	struct timespec begin, end;
+	clock_gettime(CLOCK_MONOTONIC, &begin);
 	any_err = bci_exec(&_bci, 0x0);
+	clock_gettime(CLOCK_MONOTONIC, &end);
+
+	printf("execution time: %uns\n", end.tv_nsec-begin.tv_nsec);
 	bci_de_init(&_bci);
 
 # ifndef DEBUG_ENABLED

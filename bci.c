@@ -1,19 +1,58 @@
 # include "bci.h"
 mdl_u8_t static *mem_stack = NULL;
+bci_addr_t static stack_size = 0;
+bci_err_t _any_err;
 
-void static stack_w8_put(mdl_u8_t __val, bci_addr_t __addr) {
-	mem_stack[__addr]=__val;}
+void static stack_w8_put(mdl_u8_t __val, bci_addr_t __addr, bci_err_t *__any_err) {
+	if (__addr < stack_size)
+		mem_stack[__addr]=__val;
+	else {
+# ifdef __DEBUG_ENABLED
+		fprintf(stderr, "stack_put: address out of bounds.\n");
+# endif
+		*__any_err = BCI_FAILURE;
+	}
+	*__any_err = BCI_SUCCESS;
+}
 
-mdl_u8_t static stack_w8_get(bci_addr_t __addr) {
-	return mem_stack[__addr];}
+mdl_u8_t static stack_w8_get(bci_addr_t __addr, bci_err_t *__any_err) {
+	if (__addr < stack_size)
+		return mem_stack[__addr];
+	else {
+# ifdef __DEBUG_ENABLED
+		fprintf(stderr, "stack_get: address out of bounds.\n");
+# endif
+		*__any_err = BCI_FAILURE;
+		return 0;
+	}
+	*__any_err = BCI_SUCCESS;
+}
 
 void static stack_put(mdl_u8_t *__val, mdl_uint_t __bc, bci_addr_t __addr) {
+	bci_err_t any_err;
 	for (mdl_u8_t *itr = __val; itr != __val+__bc; itr++) {
-		stack_w8_put(*itr, __addr+(itr-__val));}}
+		stack_w8_put(*itr, __addr+(itr-__val), &any_err);
+		if (any_err != BCI_SUCCESS) {
+# ifdef __DEBUG_ENABLED
+			fprintf(stderr,  "stack_put: failed.\n");
+# endif
+			return;
+		}
+	}
+}
 
 void static stack_get(mdl_u8_t *__val, mdl_uint_t __bc, bci_addr_t __addr) {
-	for (mdl_u8_t *itr = __val; itr != __val+__bc; itr++)
-		*itr = stack_w8_get(__addr+(itr-__val));}
+	bci_err_t any_err;
+	for (mdl_u8_t *itr = __val; itr != __val+__bc; itr++) {
+		*itr = stack_w8_get(__addr+(itr-__val), &any_err);
+		if (any_err != BCI_SUCCESS) {
+# ifdef __DEBUG_ENABLED
+			fprintf(stderr, "stack_get: failed.\n");
+# endif
+			return;
+		}
+	}
+}
 
 mdl_u8_t static _get_w8(void *__bci) {
 	struct bci *_bci = (struct bci*)__bci;
@@ -37,6 +76,7 @@ bci_err_t bci_init(struct bci *__bci) {
 	memset(mem_stack, 0xFF, __bci->stack_size);
 	__bci->extern_func = NULL;
 	__bci->act_ind_func = NULL;
+	stack_size = __bci->stack_size;
 	return BCI_SUCCESS;
 }
 
@@ -110,10 +150,9 @@ mdl_uint_t bcii_overhead_size() {
 bci_err_t bci_exec(struct bci *__bci, mdl_u16_t __entry_addr) {
 	__bci->set_pc(__entry_addr);
 
-	next:
+	_nxt:
 	if (__bci->act_ind_func != NULL)
 		__bci->act_ind_func();
-
 	{
 //		usleep(10000);
 		mdl_u8_t i = get_w8(__bci);
@@ -284,7 +323,7 @@ bci_err_t bci_exec(struct bci *__bci, mdl_u16_t __entry_addr) {
 				stack_get((mdl_u8_t*)&r_val, bcit_sizeof(r_type), r_addr);
 
 				mdl_u8_t dest_addr = get_w16(__bci);
-				stack_w8_put(l_val == r_val? 1:0, dest_addr);
+				stack_w8_put(l_val == r_val? 1:0, dest_addr, &_any_err);
 				break;
 			}
 
@@ -298,10 +337,10 @@ bci_err_t bci_exec(struct bci *__bci, mdl_u16_t __entry_addr) {
 
 				switch(cond) {
 					case _bcic_eq:
-						if (stack_w8_get(cond_addr)) __bci->set_pc(jmp_addr);
+						if (stack_w8_get(cond_addr, &_any_err)) __bci->set_pc(jmp_addr);
 					break;
 					case _bcic_neq:
-						if (!stack_w8_get(cond_addr)) __bci->set_pc(jmp_addr);
+						if (!stack_w8_get(cond_addr, &_any_err)) __bci->set_pc(jmp_addr);
 					break;
 				}
 				break;
@@ -324,6 +363,6 @@ bci_err_t bci_exec(struct bci *__bci, mdl_u16_t __entry_addr) {
 		}
 	}
 
-	goto next;
+	goto _nxt;
 	return BCI_SUCCESS;
 }
