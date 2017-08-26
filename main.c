@@ -30,13 +30,21 @@ bci_addr_t get_pc() {
 
 # ifdef DEBUG_ENABLED
 mdl_u8_t code[] = {
-	_bcii_exit
-}
+	_bcii_nop, 0x0,
+	_bcii_nop, 0x0,
+	_bcii_nop, 0x0,
+	_bcii_nop, 0x0,
+	_bcii_nop, 0x0,
+	_bcii_nop, 0x0,
+	_bcii_nop, 0x0,
+	_bcii_nop, 0x0,
+	_bcii_exit, 0x0
+};
 # endif
 
 struct m_arg {
 	mdl_u8_t pin_mode, pin_state, pid;
-};
+} __attribute__((packed));
 
 void* test_func(mdl_u8_t __id, void *__arg) {
 	mdl_u8_t static ret_val = 0;
@@ -69,6 +77,15 @@ void* test_func(mdl_u8_t __id, void *__arg) {
 	}
 
 	return (void*)&ret_val;
+}
+
+mdl_uint_t x = 0;
+void iei(void *__arg) {
+	struct bci *_bci = (struct bci*)__arg;
+
+	//if (x == 1)
+	bci_stop(_bci);
+	x++;
 }
 
 int main(int __argc, char const *__argv[]) {
@@ -121,10 +138,12 @@ int main(int __argc, char const *__argv[]) {
 
 	bci_err_t any_err;
 	any_err = bci_init(&_bci);
-	bci_set_extern_func(&_bci, &test_func);
+	bci_set_extern_fp(&_bci, &test_func);
+//	bci_set_iei_fp(&_bci, &iei);
+//	bci_set_iei_arg(&_bci, &_bci);
 	struct timespec begin, end;
 	clock_gettime(CLOCK_MONOTONIC, &begin);
-	any_err = bci_exec(&_bci, 0x0);
+	any_err = bci_exec(&_bci, 0x0, 0);
 	clock_gettime(CLOCK_MONOTONIC, &end);
 
 	printf("execution time: %uns\n", end.tv_nsec-begin.tv_nsec);
