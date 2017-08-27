@@ -14,8 +14,9 @@ void static stack_w8_put(struct bci *__bci, mdl_u8_t __val, bci_addr_t __addr, b
 }
 
 mdl_u8_t static stack_w8_get(struct bci *__bci, bci_addr_t __addr, bci_err_t *__any_err) {
+	mdl_u8_t ret_val;
 	if (__addr < __bci->stack_size)
-		return __bci->mem_stack[__addr];
+		ret_val = __bci->mem_stack[__addr];
 	else {
 # ifdef __DEBUG_ENABLED
 		fprintf(stderr, "stack_get: address out of bounds.\n");
@@ -24,6 +25,7 @@ mdl_u8_t static stack_w8_get(struct bci *__bci, bci_addr_t __addr, bci_err_t *__
 		return 0;
 	}
 	*__any_err = BCI_SUCCESS;
+	return ret_val;
 }
 
 void static stack_put(struct bci *__bci, mdl_u8_t *__val, mdl_uint_t __bc, bci_addr_t __addr) {
@@ -87,6 +89,7 @@ bci_err_t bci_init(struct bci *__bci) {
 	memset(__bci->mem_stack, 0xFF, __bci->stack_size);
 	__bci->extern_fp = NULL;
 	__bci->iei_fp = NULL;
+	__bci->flags = 0;
 	return BCI_SUCCESS;
 }
 
@@ -120,6 +123,7 @@ void static get(struct bci *__bci, mdl_u8_t *__val, mdl_uint_t __bc) {
 
 mdl_u8_t bcit_sizeof(mdl_u8_t __type) {
 	switch(__type) {
+		case _bcit_void: return 0;
 		case _bcit_w8: return sizeof(mdl_u8_t);
 		case _bcit_w16: return sizeof(mdl_u16_t);
 		case _bcit_w32: return sizeof(mdl_u32_t);
@@ -283,7 +287,7 @@ bci_err_t bci_exec(struct bci *__bci, mdl_u16_t __entry_addr, bci_flag_t __flags
 
 			case _bcii_print: {
 				mdl_u8_t type = get_w8(__bci);
-				mdl_u8_t _signed = (type&_bcit_msigned == _bcit_msigned);
+				mdl_u8_t _signed = (type&_bcit_msigned) == _bcit_msigned;
 				if (_signed) type = type^_bcit_msigned;
 
 				bci_addr_t addr = get_w16(__bci);
@@ -313,7 +317,7 @@ bci_err_t bci_exec(struct bci *__bci, mdl_u16_t __entry_addr, bci_flag_t __flags
 			case _bcii_aop: {
 				mdl_u8_t aop_kind = get_w8(__bci);
 				mdl_u8_t type = get_w8(__bci);
-				mdl_u8_t _signed = (type&_bcit_msigned == _bcit_msigned);
+				mdl_u8_t _signed = (type&_bcit_msigned) == _bcit_msigned;
 				if (_signed) type = type^_bcit_msigned;
 
 				bci_addr_t dest_addr = get_w16(__bci);
@@ -352,7 +356,7 @@ bci_err_t bci_exec(struct bci *__bci, mdl_u16_t __entry_addr, bci_flag_t __flags
 					break;
 				}
 
-				printf("final sum: %u, l_val: %u, r_val: %u\n", final, l_val, r_val);
+//				printf("final sum: %u, l_val: %u, r_val: %u\n", final, l_val, r_val);
 				stack_put(__bci, (mdl_u8_t*)&final, bcit_sizeof(type), dest_addr);
 				break;
 			}
@@ -380,7 +384,7 @@ bci_err_t bci_exec(struct bci *__bci, mdl_u16_t __entry_addr, bci_flag_t __flags
 				bci_addr_t addr = get_w16(__bci);
 				mdl_uint_t val = 0;
 
-				mdl_u8_t _signed = (type&_bcit_msigned == _bcit_msigned);
+				mdl_u8_t _signed = (type&_bcit_msigned) == _bcit_msigned;
 				if (_signed) type = type^_bcit_msigned;
 
 				stack_get(__bci, (mdl_u8_t*)&val, bcit_sizeof(type), addr);
@@ -445,8 +449,7 @@ bci_err_t bci_exec(struct bci *__bci, mdl_u16_t __entry_addr, bci_flag_t __flags
 			}
 
 			// required by design
-			case _bcii_exit:
-				return BCI_SUCCESS;
+			case _bcii_exit: goto _end;
 			default:
 				return BCI_FAILURE;
 		}

@@ -50,8 +50,9 @@
 # define _bcit_w32 0b00100000
 # define _bcit_w64 0b00010000
 # define _bcit_addr 0b00001000
+# define _bcit_void 0b00000100
 // signed mask
-# define _bcit_msigned 0b00000001
+# define _bcit_msigned 0b00000010
 
 # define _bcic_eq 0x0
 # define _bcic_neq 0x1
@@ -62,7 +63,7 @@
 # define _bci_aop_sub 0x2
 # define _bci_aop_div 0x3
 
-# define  _bcie_fsie 0b10000000
+# define _bcie_fsie 0b10000000
 # define _bci_fstop 0b10000000
 
 typedef mdl_u8_t bci_flag_t;

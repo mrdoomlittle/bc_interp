@@ -79,13 +79,7 @@ void* test_func(mdl_u8_t __id, void *__arg) {
 	return (void*)&ret_val;
 }
 
-mdl_uint_t x = 0;
 void iei(void *__arg) {
-	struct bci *_bci = (struct bci*)__arg;
-
-	//if (x == 1)
-	bci_stop(_bci);
-	x++;
 }
 
 int main(int __argc, char const *__argv[]) {
