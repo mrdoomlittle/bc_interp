@@ -1,0 +1,2 @@
+extern_call(4, "Hello World!\n");
+exit;
