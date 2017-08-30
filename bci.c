@@ -149,13 +149,13 @@ mdl_uint_t bcii_sizeof(mdl_u8_t *__p, bci_flag_t __flags) {
 			if (is_flag(__flags, _bcii_aop_fr_pm)) size += 2;
 			return size;
 		}
-		case _bcii_mov: 	return 6;
+		case _bcii_mov: 	return 5;
 		case _bcii_incr: case _bcii_decr:	return 4+bcit_sizeof(*(__p+5));
 		case _bcii_cmp:		return 6;
 		case _bcii_cjmp:	return 5;
 		case _bcii_jmp:		return 2;
 		case _bcii_exit:	return 1;
-		case _bcii_conv: 	return 4;
+		case _bcii_conv: 	return 6;
 	}
 	return 0;
 }
@@ -223,7 +223,6 @@ bci_err_t bci_exec(struct bci *__bci, mdl_u16_t __entry_addr, bci_flag_t __flags
 		mdl_u8_t i = get_w8(__bci);
 		bci_flag_t flags;
 		get(__bci, (mdl_u8_t*)&flags, sizeof(bci_flag_t));
-
 		switch(i) {
 			case _bcii_nop: break;
 # ifndef __BCI_BARE_BONE
@@ -260,20 +259,21 @@ bci_err_t bci_exec(struct bci *__bci, mdl_u16_t __entry_addr, bci_flag_t __flags
 			case _bcii_conv: {
 				mdl_u8_t to_type = get_w8(__bci);
 				mdl_u8_t from_type = get_w8(__bci);
-				bci_addr_t addr = get_w16(__bci);
+				bci_addr_t dst_addr = get_w16(__bci);
+				bci_addr_t src_addr = get_w16(__bci);
 
 				mdl_uint_t val = 0;
-				stack_get(__bci, (mdl_u8_t*)&val, bcit_sizeof(from_type), addr);
+				stack_get(__bci, (mdl_u8_t*)&val, bcit_sizeof(from_type), src_addr);
 
-				stack_put(__bci, (mdl_u8_t*)&val, bcit_sizeof(to_type), addr);
+				stack_put(__bci, (mdl_u8_t*)&val, bcit_sizeof(to_type), dst_addr);
 				break;
 			}
 
 			case _bcii_dr: {
 				mdl_u8_t src_type = get_w8(__bci);
-				mdl_u8_t dest_type = get_w8(__bci);
+				mdl_u8_t dst_type = get_w8(__bci);
 				bci_addr_t src_addr = get_w16(__bci);
-				bci_addr_t dest_addr = get_w16(__bci);
+				bci_addr_t dst_addr = get_w16(__bci);
 
 
 				bci_addr_t addr = 0;
@@ -281,7 +281,7 @@ bci_err_t bci_exec(struct bci *__bci, mdl_u16_t __entry_addr, bci_flag_t __flags
 
 				mdl_uint_t val = 0;
 				stack_get(__bci, (mdl_u8_t*)&val, bcit_sizeof(src_type), addr);
-				stack_put(__bci, (mdl_u8_t*)&val, bcit_sizeof(dest_type), dest_addr);
+				stack_put(__bci, (mdl_u8_t*)&val, bcit_sizeof(dst_type), dst_addr);
 				break;
 			}
 
@@ -320,7 +320,7 @@ bci_err_t bci_exec(struct bci *__bci, mdl_u16_t __entry_addr, bci_flag_t __flags
 				mdl_u8_t _signed = (type&_bcit_msigned) == _bcit_msigned;
 				if (_signed) type = type^_bcit_msigned;
 
-				bci_addr_t dest_addr = get_w16(__bci);
+				bci_addr_t dst_addr = get_w16(__bci);
 
 				mdl_uint_t l_val = 0, r_val = 0;
 				if (is_flag(flags, _bcii_aop_fl_pm))
@@ -357,25 +357,24 @@ bci_err_t bci_exec(struct bci *__bci, mdl_u16_t __entry_addr, bci_flag_t __flags
 				}
 
 //				printf("final sum: %u, l_val: %u, r_val: %u\n", final, l_val, r_val);
-				stack_put(__bci, (mdl_u8_t*)&final, bcit_sizeof(type), dest_addr);
+				stack_put(__bci, (mdl_u8_t*)&final, bcit_sizeof(type), dst_addr);
 				break;
 			}
 
 			case _bcii_mov: {
-				mdl_u8_t dest_type = get_w8(__bci);
-				mdl_u8_t src_type = get_w8(__bci);
+				mdl_u8_t type = get_w8(__bci);
 
-				bci_addr_t dest_addr = get_w16(__bci);
+				bci_addr_t dst_addr = get_w16(__bci);
 				if (is_flag(flags, _bcii_mov_fdr_da))
-					stack_get(__bci, (mdl_u8_t*)&dest_addr, bcit_sizeof(_bcit_addr), dest_addr);
+					stack_get(__bci, (mdl_u8_t*)&dst_addr, bcit_sizeof(_bcit_addr), dst_addr);
 
 				bci_addr_t src_addr = get_w16(__bci);
 				if (is_flag(flags, _bcii_mov_fdr_sa))
 					stack_get(__bci, (mdl_u8_t*)&src_addr, bcit_sizeof(_bcit_addr), src_addr);
 
 				mdl_uint_t src_val = 0;
-				stack_get(__bci, (mdl_u8_t*)&src_val, bcit_sizeof(src_type), src_addr);
-				stack_put(__bci, (mdl_u8_t*)&src_val, bcit_sizeof(dest_type), dest_addr);
+				stack_get(__bci, (mdl_u8_t*)&src_val, bcit_sizeof(type), src_addr);
+				stack_put(__bci, (mdl_u8_t*)&src_val, bcit_sizeof(type), dst_addr);
 				break;
 			}
 
@@ -415,8 +414,8 @@ bci_err_t bci_exec(struct bci *__bci, mdl_u16_t __entry_addr, bci_flag_t __flags
 				stack_get(__bci, (mdl_u8_t*)&l_val, bcit_sizeof(l_type), l_addr);
 				stack_get(__bci, (mdl_u8_t*)&r_val, bcit_sizeof(r_type), r_addr);
 
-				mdl_u8_t dest_addr = get_w16(__bci);
-				stack_w8_put(__bci, l_val == r_val? 1:0, dest_addr, &_any_err);
+				mdl_u8_t dst_addr = get_w16(__bci);
+				stack_w8_put(__bci, l_val == r_val? 1:0, dst_addr, &_any_err);
 				break;
 			}
 

@@ -47,7 +47,7 @@ struct m_arg {
 } __attribute__((packed));
 
 void* test_func(mdl_u8_t __id, void *__arg) {
-	mdl_u8_t static ret_val = 0;
+	mdl_u8_t static ret_val;
 
 	struct m_arg *_m_arg = (struct arg*)__arg;
 
@@ -67,12 +67,16 @@ void* test_func(mdl_u8_t __id, void *__arg) {
 			break;
 		}
 		case 3:
-			printf("delay called\n");
-			usleep((*(mdl_u16_t*)__arg)*1000);
+			printf("delay called, %u\n", (*(mdl_u16_t*)__arg));
+//			usleep((*(mdl_u16_t*)__arg)*1000);
 		break;
 		case 4:
 //			printf("%u\n", *(mdl_u8_t*)__arg);
 			printf("%s", (char*)__arg);
+		break;
+		case 5:
+			(*(mdl_u8_t*)__arg) |= 20;
+			printf("---> val: %u\n", (*(mdl_u8_t*)__arg));
 		break;
 	}
 

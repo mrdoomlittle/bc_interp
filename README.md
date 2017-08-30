@@ -1,2 +1,2 @@
-example: ./bin/bci hello_world.rbc
-out: Hello World!
+example: ./bin/bci hello_world.rbc <br />
+out: 'Hello World!'
