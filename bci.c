@@ -80,10 +80,8 @@ void bci_set_iei_arg(struct bci *__bci, void *__iei_arg) {
 
 bci_err_t bci_init(struct bci *__bci) {
 	__bci->mem_stack = (mdl_u8_t*)malloc(__bci->stack_size);
-# ifndef __BCI_BARE_BONE
 	__bci->eeb_list = NULL;
 	__bci->act_indc_fp = NULL;
-# endif
 	_8xdrm_init(&__bci->_8xdrm_, &_get_w8, NULL);
 	set_get_arg(&__bci->_8xdrm_, (void*)__bci);
 	memset(__bci->mem_stack, 0xFF, __bci->stack_size);
@@ -95,9 +93,7 @@ bci_err_t bci_init(struct bci *__bci) {
 
 bci_err_t bci_de_init(struct bci *__bci) {
 	free(__bci->mem_stack);
-# ifndef __BCI_BARE_BONE
 	if (__bci->eeb_list != NULL) free(__bci->eeb_list);
-# endif
 }
 
 mdl_u8_t static get_wx(struct bci *__bci, mdl_u8_t __w) {
@@ -164,7 +160,6 @@ mdl_uint_t bcii_overhead_size() {
 	return 2;
 }
 
-# ifndef __BCI_BARE_BONE
 void bci_eeb_init(struct bci *__bci, mdl_u8_t __blk_c) {
 	__bci->eeb_list = (struct bci_eeb*)malloc(__blk_c*sizeof(struct bci_eeb));
 }
@@ -184,7 +179,6 @@ void bci_eeb_call(struct bci *__bci, mdl_u8_t __blk_id) {
 		addr = __bci->get_pc();
 	}
 }
-# endif
 
 void _bci_stop(void *__arg) {
 	struct bci *_bci = (struct bci*)__arg;
@@ -225,7 +219,6 @@ bci_err_t bci_exec(struct bci *__bci, mdl_u16_t __entry_addr, bci_flag_t __flags
 		get(__bci, (mdl_u8_t*)&flags, sizeof(bci_flag_t));
 		switch(i) {
 			case _bcii_nop: break;
-# ifndef __BCI_BARE_BONE
 			case _bcii_act_indc:
 				if (__bci->act_indc_fp != NULL) __bci->act_indc_fp();
 			break;
@@ -239,7 +232,7 @@ bci_err_t bci_exec(struct bci *__bci, mdl_u16_t __entry_addr, bci_flag_t __flags
 				bci_eeb_put(__bci, blk_id, b_addr, e_addr);
 				break;
 			}
-# endif
+
 			case _bcii_extern_call: {
 				mdl_u8_t ret_type = get_w8(__bci);
 				bci_addr_t ret_addr = get_w16(__bci);

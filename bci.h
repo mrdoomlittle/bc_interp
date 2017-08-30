@@ -26,11 +26,9 @@
 # define _bcii_dr 0xA
 # define _bcii_conv 0xB // debugging
 # define _bcii_extern_call 0xC
-# ifndef __BCI_BARE_BONE
 # define _bcii_eeb_init 0xD
 # define _bcii_eeb_put 0xE
 # define _bcii_act_indc 0xF
-# endif
 # define _bcii_print 0x10
 // deref addr
 # define _bcii_assign_fdr_addr 0b10000000
@@ -82,19 +80,15 @@ struct bci {
 	void(*pc_incr)();
 	void*(*extern_fp)(mdl_u8_t, void*);
 	mdl_u8_t *mem_stack;
-# ifndef __BCI_BARE_BONE
 	struct bci_eeb *eeb_list;
 	void(*act_indc_fp)();
-# endif
 	void(*iei_fp)(void*);
 	void *iei_arg;
 	mdl_u8_t state;
 	bci_flag_t flags;
 };
 
-# ifndef __BCI_BARE_BONE
 void bci_eeb_call(struct bci*, mdl_u8_t);
-# endif
 mdl_u8_t is_flag(bci_flag_t, bci_flag_t);
 mdl_uint_t bcii_overhead_size();
 mdl_uint_t bcii_sizeof(mdl_u8_t*, bci_flag_t);
