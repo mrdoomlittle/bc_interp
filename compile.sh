@@ -1,9 +1,8 @@
-C_IFLAGS="-I8xdrm/inc -Ieint_t/inc"
+C_IFLAGS="-I8xdrm/inc -Imdlint/inc"
 C_LFLAGS="-L8xdrm/lib"
 DEFINES="-D__DEBUG_ENABLED"
 cd 8xdrm;
-sh compile.sh -I../eint_t/inc
-
+sh compile.sh -I../mdlint/inc
 cd ../;
 
 rm -f bci.o bin/bci

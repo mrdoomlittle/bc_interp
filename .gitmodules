@@ -4,3 +4,6 @@
 [submodule "eint_t"]
 	path = eint_t
 	url = git@github.com:mrdoomlittle/eint_t.git
+[submodule "mdlint"]
+	path = mdlint
+	url = git@github.com:mrdoomlittle/mdlint.git
