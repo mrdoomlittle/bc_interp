@@ -136,7 +136,7 @@ mdl_u8_t is_flag(bci_flag_t __flags, bci_flag_t __flag) {
 mdl_uint_t bcii_sizeof(mdl_u8_t *__p, bci_flag_t __flags) {
 	switch(*__p) {
 		case _bcii_extern_call: 	return 5;
-		case _bcii_dr:		return 6;
+		case _bcii_dr:		return 5;
 		case _bcii_print:	return 3;
 		case _bcii_assign:	return 3+bcit_sizeof(*(__p+1));
 		case _bcii_aop: {
@@ -263,8 +263,7 @@ bci_err_t bci_exec(struct bci *__bci, mdl_u16_t __entry_addr, bci_flag_t __flags
 			}
 
 			case _bcii_dr: {
-				mdl_u8_t src_type = get_w8(__bci);
-				mdl_u8_t dst_type = get_w8(__bci);
+				mdl_u8_t type = get_w8(__bci);
 				bci_addr_t src_addr = get_w16(__bci);
 				bci_addr_t dst_addr = get_w16(__bci);
 
@@ -273,8 +272,8 @@ bci_err_t bci_exec(struct bci *__bci, mdl_u16_t __entry_addr, bci_flag_t __flags
 				stack_get(__bci, (mdl_u8_t*)&addr, bcit_sizeof(_bcit_addr), src_addr);
 
 				mdl_uint_t val = 0;
-				stack_get(__bci, (mdl_u8_t*)&val, bcit_sizeof(src_type), addr);
-				stack_put(__bci, (mdl_u8_t*)&val, bcit_sizeof(dst_type), dst_addr);
+				stack_get(__bci, (mdl_u8_t*)&val, bcit_sizeof(type), addr);
+				stack_put(__bci, (mdl_u8_t*)&val, bcit_sizeof(type), dst_addr);
 				break;
 			}
 
