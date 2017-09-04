@@ -27,14 +27,8 @@ bci_addr_t get_pc() {
 }
 
 //# define DEBUG_ENABLED
-
 # ifdef DEBUG_ENABLED
 mdl_u8_t code[] = {
-	_bcii_nop, 0x0,
-	_bcii_nop, 0x0,
-	_bcii_nop, 0x0,
-	_bcii_nop, 0x0,
-	_bcii_nop, 0x0,
 	_bcii_nop, 0x0,
 	_bcii_nop, 0x0,
 	_bcii_nop, 0x0,
@@ -46,7 +40,7 @@ struct m_arg {
 	mdl_u8_t pin_mode, pin_state, pid;
 } __attribute__((packed));
 
-void* test_func(mdl_u8_t __id, void *__arg) {
+void* extern_call(mdl_u8_t __id, void *__arg) {
 	mdl_u8_t static ret_val;
 
 	struct m_arg *_m_arg = (struct arg*)__arg;
@@ -67,40 +61,40 @@ void* test_func(mdl_u8_t __id, void *__arg) {
 			break;
 		}
 		case 3:
-			printf("delay called, %u\n", (*(mdl_u16_t*)__arg));
-//			usleep((*(mdl_u16_t*)__arg)*1000);
+			usleep(*(mdl_u16_t*)__arg*1000000);
 		break;
 		case 4:
-//			printf("%u\n", *(mdl_u8_t*)__arg);
 			printf("%s", (char*)__arg);
-		break;
-		case 5:
-			(*(mdl_u8_t*)__arg) |= 20;
-			printf("---> val: %u\n", (*(mdl_u8_t*)__arg));
 		break;
 	}
 
 	return (void*)&ret_val;
 }
 
+mdl_uint_t ie_c = 0;
 void iei(void *__arg) {
+	ie_c++;
 }
 
 int main(int __argc, char const *__argv[]) {
-# ifndef DEBUG_ENABLED
+# ifdef DEBUG_ENABLED
+	bc = code;
+# else
 	if (__argc < 2) {
 		fprintf(stderr, "usage: ./bci [src file]\n");
 		return BCI_FAILURE;
 	}
 
+	char const *floc = __argv[1];
+
 	int fd;
-	if ((fd = open(__argv[1], O_RDONLY)) < 0) {
+	if ((fd = open(floc, O_RDONLY)) < 0) {
 		fprintf(stderr, "bci: failed to open file provided.\n");
 		return BCI_FAILURE;
 	}
 
 	struct stat st;
-	if (stat(__argv[1], &st) < 0) {
+	if (stat(floc, &st) < 0) {
 		fprintf(stderr, "bci: failed to stat file.\n");
 		close(fd);
 		return BCI_FAILURE;
@@ -109,23 +103,8 @@ int main(int __argc, char const *__argv[]) {
 	bc = (mdl_u8_t*)malloc(st.st_size);
 	read(fd, bc, st.st_size);
 	close(fd);
-# else
-/*
-	struct _8xdrm_t _8xdrm;
-	_8xdrm_init(&_8xdrm, &_get_byte, &_put_byte);
-
-	_8xdrm_put_wx(&_8xdrm, _bcii_print, 8);
-	_8xdrm_put_wx(&_8xdrm, 0x0, 8);
-
-	_8xdrm_put_wx(&_8xdrm, _bcit_w16, 4);
-	_8xdrm_put_wx(&_8xdrm, 0x0, 8);
-	_8xdrm_put_wx(&_8xdrm, 0x0, 8);
-
-	_8xdrm_put_wx(&_8xdrm, _bcii_exit, 8);
-	_8xdrm_dump(&_8xdrm);
-*/
-	bc = code;
 # endif
+
 	struct bci _bci = {
 		.stack_size = 120,
 		.get_byte = &get_byte,
@@ -136,17 +115,17 @@ int main(int __argc, char const *__argv[]) {
 
 	bci_err_t any_err;
 	any_err = bci_init(&_bci);
-	bci_set_extern_fp(&_bci, &test_func);
-//	bci_set_iei_fp(&_bci, &iei);
-//	bci_set_iei_arg(&_bci, &_bci);
+	bci_set_extern_fp(&_bci, &extern_call);
+	bci_set_iei_fp(&_bci, &iei);
+
 	struct timespec begin, end;
 	clock_gettime(CLOCK_MONOTONIC, &begin);
 	any_err = bci_exec(&_bci, 0x0, 0);
 	clock_gettime(CLOCK_MONOTONIC, &end);
 
-	printf("execution time: %uns\n", end.tv_nsec-begin.tv_nsec);
+	// ie_c = instruction execution count
+	printf("execution time: %uns, ie_c: %u\n", end.tv_nsec-begin.tv_nsec, ie_c);
 	bci_de_init(&_bci);
-
 # ifndef DEBUG_ENABLED
 	free(bc);
 # endif
