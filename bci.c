@@ -1,9 +1,8 @@
 # include "bci.h"
 bci_err_t _any_err;
-
 void static stack_w8_put(struct bci *__bci, mdl_u8_t __val, bci_addr_t __addr, bci_err_t *__any_err) {
 	if (__addr < __bci->stack_size)
-		__bci->mem_stack[__addr]=__val;
+		__bci->mem_stack[__addr] = __val;
 	else {
 # ifdef __DEBUG_ENABLED
 		fprintf(stderr, "stack_put: address out of bounds.\n");
@@ -152,6 +151,9 @@ mdl_uint_t bcii_sizeof(mdl_u8_t *__p, bci_flag_t __flags) {
 		case _bcii_jmp:		return 2;
 		case _bcii_exit:	return 1;
 		case _bcii_conv: 	return 6;
+		case _bcii_eeb_init:return 1;
+		case _bcii_eeb_put:return 1+(bcit_sizeof(_bcit_addr)*2);
+		default: return 0;
 	}
 	return 0;
 }
