@@ -1,2 +1,9 @@
-extern_call(4, "Hello World!\n");
+# include <stdio.bc>
+u8_t c = 5;
+while(c != 0) {
+	printf("%u\n", c);
+	c--;
+}
+
+printf("Hello World!!!\n");
 exit;
