@@ -40,6 +40,7 @@
 
 # define _bcii_aop_fl_pm 0b10000000
 # define _bcii_aop_fr_pm 0b01000000
+# define _bcii_iod_fbc_addr 0b10000000
 
 // types
 # define _bcit_w8 0b10000000
@@ -51,9 +52,16 @@
 // signed mask
 # define _bcit_msigned 0b00000010
 
-# define _bcic_eq 0x0
-# define _bcic_neq 0x1
+# define _bcif_eq 0b10000000
+# define _bcif_gt 0b01000000
+# define _bcif_lt 0b00100000
 
+# define _bcic_eq 0x1
+# define _bcic_neq 0x2
+# define _bcic_gt 0x3
+# define _bcic_lt 0x4
+# define _bcic_leq 0x5
+# define _bcic_geq 0x6
 // aop types
 # define _bci_aop_add 0x0
 # define _bci_aop_mul 0x1
@@ -88,6 +96,7 @@ struct bci {
 	bci_flag_t flags;
 };
 
+void* bci_resolv_addr(struct bci*, bci_addr_t);
 void bci_eeb_call(struct bci*, mdl_u8_t);
 mdl_u8_t is_flag(bci_flag_t, bci_flag_t);
 mdl_uint_t bcii_overhead_size();

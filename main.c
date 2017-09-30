@@ -36,9 +36,56 @@ mdl_u8_t code[] = {
 };
 # endif
 
+struct bci _bci = {
+	.stack_size = 120,
+	.get_byte = &get_byte,
+	.set_pc = &set_pc,
+	.get_pc = &get_pc,
+	.pc_incr = &pc_incr
+};
+
 struct m_arg {
 	mdl_u8_t pin_mode, pin_state, pid;
 } __attribute__((packed));
+
+struct pair {
+	bci_addr_t p1, p2;
+} __attribute__((packed));
+
+void bci_printf(struct pair *__pair) {
+	char obuf[200];
+	mdl_u8_t *arg_p = (mdl_u8_t*)bci_resolv_addr(&_bci, __pair->p2);
+	char *s = (char*)bci_resolv_addr(&_bci, __pair->p1);
+	char *itr = s, *ob_itr = obuf;
+
+	mdl_uint_t cc;
+	while(*itr != '\0') {
+		if (*itr == '%') {
+			itr++;
+			switch(*itr) {
+				case 's': {
+					char *s;
+					cc = strlen((s = (char*)bci_resolv_addr(&_bci, *(bci_addr_t*)arg_p)));
+					strncpy(ob_itr, s, cc);
+					ob_itr+= cc;
+					arg_p+= sizeof(mdl_u64_t);
+					break;
+				}
+				case 'c': *(ob_itr++) = *(arg_p++);break;
+				case 'u':
+					cc = sprintf(ob_itr, "%u", *(mdl_u64_t*)arg_p);
+					ob_itr+= cc;
+					arg_p+= sizeof(mdl_u64_t);
+				break;
+			}
+			itr++;
+		} else
+			*(ob_itr++) = *(itr++);
+	}
+
+	*ob_itr = '\0';
+	printf("%s", obuf);
+}
 
 void* extern_call(mdl_u8_t __id, void *__arg) {
 	mdl_u8_t static ret_val;
@@ -64,7 +111,8 @@ void* extern_call(mdl_u8_t __id, void *__arg) {
 			usleep(*(mdl_u16_t*)__arg*1000000);
 		break;
 		case 4:
-			printf("%s", (char*)__arg);
+			bci_printf((struct pair*)__arg);
+//			printf("%s", (char*)__arg);
 		break;
 	}
 
@@ -74,6 +122,7 @@ void* extern_call(mdl_u8_t __id, void *__arg) {
 mdl_uint_t ie_c = 0;
 void iei(void *__arg) {
 	ie_c++;
+//	usleep(10000);
 }
 
 int main(int __argc, char const *__argv[]) {
@@ -86,6 +135,7 @@ int main(int __argc, char const *__argv[]) {
 	}
 
 	char const *floc = __argv[1];
+	printf("bc: %s\n", floc);
 
 	int fd;
 	if ((fd = open(floc, O_RDONLY)) < 0) {
@@ -104,15 +154,6 @@ int main(int __argc, char const *__argv[]) {
 	read(fd, bc, st.st_size);
 	close(fd);
 # endif
-
-	struct bci _bci = {
-		.stack_size = 120,
-		.get_byte = &get_byte,
-		.set_pc = &set_pc,
-		.get_pc = &get_pc,
-		.pc_incr = &pc_incr
-	};
-
 	bci_err_t any_err;
 	any_err = bci_init(&_bci);
 	bci_set_extern_fp(&_bci, &extern_call);
