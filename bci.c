@@ -296,9 +296,9 @@ bci_err_t bci_exec(struct bci *__bci, mdl_u16_t __entry_addr, bci_flag_t __flags
 				if (stack_get(__bci, (mdl_u8_t*)&val, bcit_sizeof(type), addr) != BCI_SUCCESS) goto _end;
 
 				if (_signed)
-					printf("out: %d\n", (mdl_int_t)(val|(((mdl_int_t)~0)<<(bcit_sizeof(type)*8))));
+					printf("out: %ld\n", (mdl_i64_t)(val|(((mdl_i64_t)~0)<<(bcit_sizeof(type)*8))));
 				else
-					printf("out: %u\n", val);
+					printf("out: %lu\n", val);
 				break;
 			}
 

@@ -73,7 +73,7 @@ void bci_printf(struct pair *__pair) {
 				}
 				case 'c': *(ob_itr++) = *(arg_p++);break;
 				case 'u':
-					cc = sprintf(ob_itr, "%u", *(mdl_u64_t*)arg_p);
+					cc = sprintf(ob_itr, "%lu", *(mdl_u64_t*)arg_p);
 					ob_itr+= cc;
 					arg_p+= sizeof(mdl_u64_t);
 				break;
@@ -90,7 +90,7 @@ void bci_printf(struct pair *__pair) {
 void* extern_call(mdl_u8_t __id, void *__arg) {
 	mdl_u8_t static ret_val;
 
-	struct m_arg *_m_arg = (struct arg*)__arg;
+	struct m_arg *_m_arg = (struct m_arg*)__arg;
 
 	switch(__id) {
 		case 0: {
@@ -165,7 +165,7 @@ int main(int __argc, char const *__argv[]) {
 	clock_gettime(CLOCK_MONOTONIC, &end);
 
 	// ie_c = instruction execution count
-	printf("execution time: %uns, ie_c: %u\n", end.tv_nsec-begin.tv_nsec, ie_c);
+	printf("execution time: %luns, ie_c: %u\n", end.tv_nsec-begin.tv_nsec, ie_c);
 	bci_de_init(&_bci);
 # ifndef DEBUG_ENABLED
 	free(bc);
