@@ -43,12 +43,13 @@
 # define _bcii_iod_fbc_addr 0b10000000
 
 // types
-# define _bcit_w8 0b10000000
-# define _bcit_w16 0b01000000
-# define _bcit_w32 0b00100000
-# define _bcit_w64 0b00010000
-# define _bcit_addr 0b00001000
-# define _bcit_void 0b00000100
+# define _bcit_8l 0x80
+# define _bcit_16l 0x40
+# define _bcit_32l 0x20
+# define _bcit_64l 0x10
+# define _bcit_addr 0x8
+# define _bcit_void 0x4
+
 // signed mask
 # define _bcit_msigned 0b00000010
 

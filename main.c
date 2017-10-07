@@ -88,7 +88,7 @@ void bci_printf(struct pair *__pair) {
 }
 
 void* extern_call(mdl_u8_t __id, void *__arg) {
-	mdl_u8_t static ret_val;
+	mdl_u8_t static ret_val = 0;
 
 	struct m_arg *_m_arg = (struct m_arg*)__arg;
 
@@ -112,7 +112,6 @@ void* extern_call(mdl_u8_t __id, void *__arg) {
 		break;
 		case 4:
 			bci_printf((struct pair*)__arg);
-//			printf("%s", (char*)__arg);
 		break;
 	}
 
@@ -120,9 +119,8 @@ void* extern_call(mdl_u8_t __id, void *__arg) {
 }
 
 mdl_uint_t ie_c = 0;
-void iei(void *__arg) {
+void iei(void *__arg_p) {
 	ie_c++;
-//	usleep(10000);
 }
 
 int main(int __argc, char const *__argv[]) {
@@ -135,8 +133,6 @@ int main(int __argc, char const *__argv[]) {
 	}
 
 	char const *floc = __argv[1];
-	printf("bc: %s\n", floc);
-
 	int fd;
 	if ((fd = open(floc, O_RDONLY)) < 0) {
 		fprintf(stderr, "bci: failed to open file provided.\n");
@@ -154,7 +150,7 @@ int main(int __argc, char const *__argv[]) {
 	read(fd, bc, st.st_size);
 	close(fd);
 # endif
-	bci_err_t any_err;
+	bci_err_t any_err = BCI_SUCCESS;
 	any_err = bci_init(&_bci);
 	bci_set_extern_fp(&_bci, &extern_call);
 	bci_set_iei_fp(&_bci, &iei);
@@ -165,7 +161,7 @@ int main(int __argc, char const *__argv[]) {
 	clock_gettime(CLOCK_MONOTONIC, &end);
 
 	// ie_c = instruction execution count
-	printf("execution time: %luns, ie_c: %u\n", end.tv_nsec-begin.tv_nsec, ie_c);
+	printf("execution time: %luns, ie_c: %u\n", (end.tv_nsec-begin.tv_nsec)+((end.tv_sec-begin.tv_sec)*1000000000), ie_c);
 	bci_de_init(&_bci);
 # ifndef DEBUG_ENABLED
 	free(bc);
