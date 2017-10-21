@@ -270,9 +270,12 @@ bci_err_t bci_exec(struct bci *__bci, mdl_u16_t __entry_addr, bci_flag_t __flags
 				mdl_u64_t val = 0;
 				if (stack_get(__bci, (mdl_u8_t*)&val, bcit_sizeof(type), addr) != BCI_SUCCESS) goto _end;
 
-				if (_signed)
-					printf("out: %ld\n", (mdl_i64_t)(val|(((mdl_i64_t)~0)<<(bcit_sizeof(type)*8))));
-				else
+				if (_signed) {
+					mdl_u64_t p = val^(val&(((mdl_i64_t)~0)<<(bcit_sizeof(type)*8)));
+					mdl_i64_t n = (mdl_i64_t)(val|(((mdl_i64_t)~0)<<(bcit_sizeof(type)*8)));
+					if (p > (1<<(bcit_sizeof(type)*8))) printf("out: %ld\n", (mdl_i64_t)n);
+					if (p < (1<<(bcit_sizeof(type)*8))) printf("out: %lu\n", (mdl_i64_t)p);
+				} else
 					printf("out: %lu\n", val);
 				break;
 			}
@@ -316,19 +319,19 @@ bci_err_t bci_exec(struct bci *__bci, mdl_u16_t __entry_addr, bci_flag_t __flags
 				mdl_u64_t final;
 				switch(aop_kind) {
 					case _bci_aop_add:
-						final = _signed? (mdl_int_t)l_val+(mdl_int_t)r_val:l_val+r_val;
+						final = _signed? (mdl_i64_t)l_val+(mdl_i64_t)r_val:l_val+r_val;
 					break;
 
 					case _bci_aop_mul:
-						final = _signed? (mdl_int_t)l_val*(mdl_int_t)r_val:l_val*r_val;
+						final = _signed? (mdl_i64_t)l_val*(mdl_i64_t)r_val:l_val*r_val;
 					break;
 
 					case _bci_aop_sub:
-						final = _signed? (mdl_int_t)l_val-(mdl_int_t)r_val:l_val-r_val;
+						final = _signed? (mdl_i64_t)l_val-(mdl_i64_t)r_val:l_val-r_val;
 					break;
 
 					case _bci_aop_div:
-						final = _signed? (mdl_int_t)l_val/(mdl_int_t)r_val:l_val/r_val;
+						final = _signed? (mdl_i64_t)l_val/(mdl_i64_t)r_val:l_val/r_val;
 					break;
 				}
 				if (stack_put(__bci, (mdl_u8_t*)&final, bcit_sizeof(type), dst_addr) != BCI_SUCCESS) goto _end;
