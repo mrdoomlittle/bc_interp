@@ -273,8 +273,8 @@ bci_err_t bci_exec(struct bci *__bci, mdl_u16_t __entry_addr, bci_flag_t __flags
 				if (_signed) {
 					mdl_u64_t p = val^(val&(((mdl_i64_t)~0)<<(bcit_sizeof(type)*8)));
 					mdl_i64_t n = (mdl_i64_t)(val|(((mdl_i64_t)~0)<<(bcit_sizeof(type)*8)));
-					if (p > (1<<(bcit_sizeof(type)*8))) printf("out: %ld\n", (mdl_i64_t)n);
-					if (p < (1<<(bcit_sizeof(type)*8))) printf("out: %lu\n", (mdl_i64_t)p);
+					if (p > (1<<(bcit_sizeof(type)*8))>>1) printf("out: %ld\n", (mdl_i64_t)n);
+					if (p < (1<<(bcit_sizeof(type)*8))>>1) printf("out: %lu\n", (mdl_i64_t)p);
 				} else
 					printf("out: %lu\n", val);
 				break;
