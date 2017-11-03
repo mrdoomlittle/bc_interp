@@ -84,7 +84,7 @@ void bci_printf(struct pair *__pair) {
 	}
 
 	*ob_itr = '\0';
-	printf("%s", obuf);
+	fprintf(stdout, "%s", obuf);
 }
 
 void* extern_call(mdl_u8_t __id, void *__arg) {
@@ -132,7 +132,17 @@ int main(int __argc, char const *__argv[]) {
 		return BCI_FAILURE;
 	}
 
-	char const *floc = __argv[1];
+	mdl_u16_t entry_point = 0x0;
+	mdl_u8_t show_stats = 0;
+	char const **arg_itr = __argv+1;
+	while(arg_itr != __argv+__argc) {
+		if (!strcmp(*arg_itr, "-s")) show_stats = 1;
+		else if (!strcmp(*arg_itr, "-e"))
+			sscanf(*(++arg_itr), "%4hx", &entry_point);
+		arg_itr++;
+	}
+
+	char const *floc = __argv[__argc-1];
 	int fd;
 	if ((fd = open(floc, O_RDONLY)) < 0) {
 		fprintf(stderr, "bci: failed to open file provided.\n");
@@ -157,11 +167,12 @@ int main(int __argc, char const *__argv[]) {
 
 	struct timespec begin, end;
 	clock_gettime(CLOCK_MONOTONIC, &begin);
-	any_err = bci_exec(&_bci, 0x0, 0);
+	any_err = bci_exec(&_bci, entry_point, 0);
 	clock_gettime(CLOCK_MONOTONIC, &end);
 
 	// ie_c = instruction execution count
-	printf("execution time: %luns, ie_c: %u\n", (end.tv_nsec-begin.tv_nsec)+((end.tv_sec-begin.tv_sec)*1000000000), ie_c);
+	if (show_stats)
+		fprintf(stdout, "execution time: %luns, ie_c: %u\n", (end.tv_nsec-begin.tv_nsec)+((end.tv_sec-begin.tv_sec)*1000000000), ie_c);
 	bci_de_init(&_bci);
 # ifndef DEBUG_ENABLED
 	free(bc);

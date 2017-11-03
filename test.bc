@@ -1,0 +1,3 @@
+bca("assign rg_32a 1019877372 bcit_32l 0");
+bca("print bcit_32l rg_32a 0");
+_exit;
