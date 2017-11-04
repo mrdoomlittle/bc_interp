@@ -45,6 +45,9 @@
 # define _bcii_aop_fr_pm 0b01000000
 # define _bcii_iod_fbc_addr 0b10000000
 
+# define _bcii_lop_fl_pm 0b10000000
+# define _bcii_lop_fr_pm 0b01000000
+
 // types
 # define _bcit_8l 0x80
 # define _bcit_16l 0x40

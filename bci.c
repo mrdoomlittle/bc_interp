@@ -140,6 +140,12 @@ mdl_uint_t bcii_sizeof(mdl_u8_t *__p, bci_flag_t __flags) {
 			if (is_flag(__flags, _bcii_aop_fr_pm)) size += 2;
 			return size;
 		}
+		case _bcii_lop: {
+			mdl_uint_t size = 4;
+			if (is_flag(__flags, _bcii_lop_fl_pm)) size += 2;
+			if (is_flag(__flags, _bcii_lop_fr_pm)) size += 2;
+			return size;
+		}
 		case _bcii_mov: 			return 5;
 		case _bcii_incr: case _bcii_decr:
 			if (is_flag(__flags, _bcii_iod_fbc_addr)) return 5;
@@ -158,7 +164,6 @@ mdl_uint_t bcii_sizeof(mdl_u8_t *__p, bci_flag_t __flags) {
 }
 
 mdl_uint_t bcii_overhead_size() {return 2;}
-
 void bci_eeb_init(struct bci *__bci, mdl_u8_t __blk_c) {
 	if (__bci->eeb_list != NULL) return;
 	__bci->eeb_list = (struct bci_eeb*)malloc(__blk_c*sizeof(struct bci_eeb));
@@ -235,14 +240,21 @@ bci_err_t bci_exec(struct bci *__bci, mdl_u16_t __entry_addr, bci_flag_t __flags
 				mdl_u8_t lop_kind = get_8l(__bci);
 				mdl_u8_t type = get_8l(__bci)&0xF8;
 				mdl_u64_t l_val = 0, r_val = 0;
-				bci_addr_t l_addr, r_addr, dst_addr;
+				bci_addr_t dst_addr = get_16l(__bci);
 
-				l_addr = get_16l(__bci);
-				r_addr = get_16l(__bci);
-				dst_addr = get_16l(__bci);
+				if (is_flag(flags, _bcii_lop_fl_pm))
+					get(__bci, (mdl_u8_t*)&l_val, bcit_sizeof(type));
+				else {
+					bci_addr_t l_addr = get_16l(__bci);
+					if (stack_get(__bci, (mdl_u8_t*)&l_val, bcit_sizeof(type), l_addr) != BCI_SUCCESS) goto _end;
+				}
 
-				if (stack_get(__bci, (mdl_u8_t*)&l_val, bcit_sizeof(type), l_addr) != BCI_SUCCESS) goto _end;
-				if (stack_get(__bci, (mdl_u8_t*)&r_val, bcit_sizeof(type), r_addr) != BCI_SUCCESS) goto _end;
+				if (is_flag(flags, _bcii_lop_fr_pm))
+					get(__bci, (mdl_u8_t*)&r_val, bcit_sizeof(type));
+				else {
+					bci_addr_t r_addr = get_16l(__bci);
+					if (stack_get(__bci, (mdl_u8_t*)&r_val, bcit_sizeof(type), r_addr) != BCI_SUCCESS) goto _end;
+				}
 
 				mdl_u64_t final = 0;
 				switch(lop_kind) {
@@ -267,8 +279,9 @@ bci_err_t bci_exec(struct bci *__bci, mdl_u16_t __entry_addr, bci_flag_t __flags
 				mdl_u64_t val = 0;
 				if (stack_get(__bci, (mdl_u8_t*)&val, bcit_sizeof(type), val_addr) != BCI_SUCCESS) goto _end;
 
+				mdl_u8_t _type = get_8l(__bci)&0xF8;
 				mdl_u64_t sc = 0;
-				get(__bci, (mdl_u8_t*)&sc, bcit_sizeof(type));
+				get(__bci, (mdl_u8_t*)&sc, bcit_sizeof(_type));
 				if (i == _bcii_shr) val >>= sc;
 				else if (i == _bcii_shl) val <<= sc;
 				if (stack_put(__bci, (mdl_u8_t*)&val, bcit_sizeof(type), val_addr) != BCI_SUCCESS) goto _end;
@@ -291,13 +304,19 @@ bci_err_t bci_exec(struct bci *__bci, mdl_u16_t __entry_addr, bci_flag_t __flags
 
 			case _bcii_conv: {
 				mdl_u8_t to_type = get_8l(__bci)&0xFC;
-				mdl_u8_t from_type = get_8l(__bci)&0xFC;
+				mdl_u8_t from_type = get_8l(__bci);
+
+				mdl_u8_t ft_signed = (from_type&_bcit_msigned) == _bcit_msigned;
+				if (ft_signed) from_type ^= _bcit_msigned;
 
 				bci_addr_t dst_addr = get_16l(__bci);
 				bci_addr_t src_addr = get_16l(__bci);
 
 				mdl_u64_t val = 0;
 				if (stack_get(__bci, (mdl_u8_t*)&val, bcit_sizeof(from_type), src_addr) != BCI_SUCCESS) goto _end;
+				if (ft_signed && bcit_sizeof(to_type) > bcit_sizeof(from_type) && val > (1<<(bcit_sizeof(from_type)*8))>>1)
+					val |= (~(mdl_u64_t)0)<<(bcit_sizeof(from_type)*8);
+
 				if (stack_put(__bci, (mdl_u8_t*)&val, bcit_sizeof(to_type), dst_addr) != BCI_SUCCESS) goto _end;
 				break;
 			}
@@ -454,9 +473,9 @@ bci_err_t bci_exec(struct bci *__bci, mdl_u16_t __entry_addr, bci_flag_t __flags
 				if (stack_get(__bci, (mdl_u8_t*)&l_val, bcit_sizeof(l_type), l_addr) != BCI_SUCCESS) goto _end;
 				if (stack_get(__bci, (mdl_u8_t*)&r_val, bcit_sizeof(r_type), r_addr) != BCI_SUCCESS) goto _end;
 
-				if (l_val > 128 && l_signed)
+				if (l_val > (1<<(bcit_sizeof(l_type)*8))>>1 && l_signed)
 					l_val |= (~(mdl_u64_t)0)<<(bcit_sizeof(l_type)*8);
-				if (r_val > 128 && r_signed)
+				if (r_val > (1<<(bcit_sizeof(r_type)*8))>>1 && r_signed)
 					r_val |= (~(mdl_u64_t)0)<<(bcit_sizeof(r_type)*8);
 # ifdef __DEBUG_ENABLED
 				fprintf(stdout, "l_val: %ld, r_val: %ld\n", (mdl_i64_t)l_val, (mdl_i64_t)r_val);
