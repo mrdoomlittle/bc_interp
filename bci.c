@@ -100,7 +100,7 @@ mdl_u8_t static get_8l(struct bci *__bci) {
 	return get_lx(__bci, 8);
 }
 
-mdl_u16_t static get_w16(struct bci *__bci) {
+mdl_u16_t static get_16l(struct bci *__bci) {
 	mdl_u16_t ret_val = 0x00;
 	ret_val = get_8l(__bci);
 	ret_val |= get_8l(__bci)<<8;
@@ -225,17 +225,61 @@ bci_err_t bci_exec(struct bci *__bci, mdl_u16_t __entry_addr, bci_flag_t __flags
 			break;
 			case _bcii_eeb_put: {
 				mdl_u8_t blk_id = get_8l(__bci);
-				bci_addr_t b_addr = get_w16(__bci);
-				bci_addr_t e_addr = get_w16(__bci);
+				bci_addr_t b_addr = get_16l(__bci);
+				bci_addr_t e_addr = get_16l(__bci);
 				bci_eeb_put(__bci, blk_id, b_addr, e_addr);
+				break;
+			}
+
+			case _bcii_lop: {
+				mdl_u8_t lop_kind = get_8l(__bci);
+				mdl_u8_t type = get_8l(__bci)&0xF8;
+				mdl_u64_t l_val = 0, r_val = 0;
+				bci_addr_t l_addr, r_addr, dst_addr;
+
+				l_addr = get_16l(__bci);
+				r_addr = get_16l(__bci);
+				dst_addr = get_16l(__bci);
+
+				if (stack_get(__bci, (mdl_u8_t*)&l_val, bcit_sizeof(type), l_addr) != BCI_SUCCESS) goto _end;
+				if (stack_get(__bci, (mdl_u8_t*)&r_val, bcit_sizeof(type), r_addr) != BCI_SUCCESS) goto _end;
+
+				mdl_u64_t final = 0;
+				switch(lop_kind) {
+					case _bci_lop_xor:
+						final = l_val^r_val;
+					break;
+					case _bci_lop_or:
+						final = l_val|r_val;
+					break;
+					case _bci_lop_and:
+						final = l_val&r_val;
+					break;
+				}
+				if (stack_put(__bci, (mdl_u8_t*)&final, bcit_sizeof(type), dst_addr) != BCI_SUCCESS) goto _end;
+				break;
+			}
+
+			case _bcii_shr: case _bcii_shl: {
+				mdl_u8_t type = get_8l(__bci)&0xF8;
+				bci_addr_t val_addr = get_16l(__bci);
+
+				mdl_u64_t val = 0;
+				if (stack_get(__bci, (mdl_u8_t*)&val, bcit_sizeof(type), val_addr) != BCI_SUCCESS) goto _end;
+
+				mdl_u64_t sc = 0;
+				get(__bci, (mdl_u8_t*)&sc, bcit_sizeof(type));
+				if (i == _bcii_shr) val >>= sc;
+				else if (i == _bcii_shl) val <<= sc;
+				if (stack_put(__bci, (mdl_u8_t*)&val, bcit_sizeof(type), val_addr) != BCI_SUCCESS) goto _end;
 				break;
 			}
 
 			case _bcii_extern_call: {
 				mdl_u8_t ret_type = get_8l(__bci)&0xFC;
-				bci_addr_t ret_addr = get_w16(__bci);
-				bci_addr_t id_addr = get_w16(__bci);
-				bci_addr_t arg_addr = get_w16(__bci);
+				bci_addr_t ret_addr = get_16l(__bci);
+				bci_addr_t id_addr = get_16l(__bci);
+				bci_addr_t arg_addr = get_16l(__bci);
 
 				arg_addr = *(bci_addr_t*)(__bci->mem_stack+arg_addr);
 				if (__bci->extern_fp != NULL) {
@@ -248,8 +292,9 @@ bci_err_t bci_exec(struct bci *__bci, mdl_u16_t __entry_addr, bci_flag_t __flags
 			case _bcii_conv: {
 				mdl_u8_t to_type = get_8l(__bci)&0xFC;
 				mdl_u8_t from_type = get_8l(__bci)&0xFC;
-				bci_addr_t dst_addr = get_w16(__bci);
-				bci_addr_t src_addr = get_w16(__bci);
+
+				bci_addr_t dst_addr = get_16l(__bci);
+				bci_addr_t src_addr = get_16l(__bci);
 
 				mdl_u64_t val = 0;
 				if (stack_get(__bci, (mdl_u8_t*)&val, bcit_sizeof(from_type), src_addr) != BCI_SUCCESS) goto _end;
@@ -259,8 +304,8 @@ bci_err_t bci_exec(struct bci *__bci, mdl_u16_t __entry_addr, bci_flag_t __flags
 
 			case _bcii_dr: {
 				mdl_u8_t type = get_8l(__bci)&0xFC;
-				bci_addr_t src_addr = get_w16(__bci);
-				bci_addr_t dst_addr = get_w16(__bci);
+				bci_addr_t src_addr = get_16l(__bci);
+				bci_addr_t dst_addr = get_16l(__bci);
 
 				bci_addr_t addr = 0;
 				if (stack_get(__bci, (mdl_u8_t*)&addr, bcit_sizeof(_bcit_addr), src_addr) != BCI_SUCCESS) goto _end;
@@ -276,7 +321,7 @@ bci_err_t bci_exec(struct bci *__bci, mdl_u16_t __entry_addr, bci_flag_t __flags
 				mdl_u8_t _signed = (type&_bcit_msigned) == _bcit_msigned;
 				if (_signed) type ^= _bcit_msigned;
 
-				bci_addr_t addr = get_w16(__bci);
+				bci_addr_t addr = get_16l(__bci);
 				mdl_u64_t val = 0;
 				if (stack_get(__bci, (mdl_u8_t*)&val, bcit_sizeof(type), addr) != BCI_SUCCESS) goto _end;
 
@@ -292,7 +337,7 @@ bci_err_t bci_exec(struct bci *__bci, mdl_u16_t __entry_addr, bci_flag_t __flags
 
 			case _bcii_assign: {
 				mdl_u8_t type = get_8l(__bci)&0xFC;
-				bci_addr_t addr = get_w16(__bci);
+				bci_addr_t addr = get_16l(__bci);
 
 				if (is_flag(flags, _bcii_assign_fdr_addr))
 					if (stack_get(__bci, (mdl_u8_t*)&addr, bcit_sizeof(_bcit_addr), addr) != BCI_SUCCESS) goto _end;
@@ -309,20 +354,20 @@ bci_err_t bci_exec(struct bci *__bci, mdl_u16_t __entry_addr, bci_flag_t __flags
 				mdl_u8_t _signed = (type&_bcit_msigned) == _bcit_msigned;
 				if (_signed) type ^= _bcit_msigned;
 
-				bci_addr_t dst_addr = get_w16(__bci);
+				bci_addr_t dst_addr = get_16l(__bci);
 
 				mdl_u64_t l_val = 0, r_val = 0;
 				if (is_flag(flags, _bcii_aop_fl_pm))
 					get(__bci, (mdl_u8_t*)&l_val, bcit_sizeof(type));
 				else {
-					bci_addr_t l_addr = get_w16(__bci);
+					bci_addr_t l_addr = get_16l(__bci);
 					if (stack_get(__bci, (mdl_u8_t*)&l_val, bcit_sizeof(type), l_addr) != BCI_SUCCESS) goto _end;
 				}
 
 				if (is_flag(flags, _bcii_aop_fr_pm))
 					get(__bci, (mdl_u8_t*)&r_val, bcit_sizeof(type));
 				else {
-					bci_addr_t r_addr = get_w16(__bci);
+					bci_addr_t r_addr = get_16l(__bci);
 					if (stack_get(__bci, (mdl_u8_t*)&r_val, bcit_sizeof(type), r_addr) != BCI_SUCCESS) goto _end;
 				}
 
@@ -350,11 +395,11 @@ bci_err_t bci_exec(struct bci *__bci, mdl_u16_t __entry_addr, bci_flag_t __flags
 
 			case _bcii_mov: {
 				mdl_u8_t type = get_8l(__bci)&0xFC;
-				bci_addr_t dst_addr = get_w16(__bci);
+				bci_addr_t dst_addr = get_16l(__bci);
 				if (is_flag(flags, _bcii_mov_fdr_da))
 					if (stack_get(__bci, (mdl_u8_t*)&dst_addr, bcit_sizeof(_bcit_addr), dst_addr) != BCI_SUCCESS) goto _end;
 
-				bci_addr_t src_addr = get_w16(__bci);
+				bci_addr_t src_addr = get_16l(__bci);
 				if (is_flag(flags, _bcii_mov_fdr_sa))
 					if (stack_get(__bci, (mdl_u8_t*)&src_addr, bcit_sizeof(_bcit_addr), src_addr) != BCI_SUCCESS) goto _end;
 
@@ -366,7 +411,7 @@ bci_err_t bci_exec(struct bci *__bci, mdl_u16_t __entry_addr, bci_flag_t __flags
 
 			case _bcii_incr: case _bcii_decr: {
 				mdl_u8_t type = get_8l(__bci);
-				bci_addr_t addr = get_w16(__bci);
+				bci_addr_t addr = get_16l(__bci);
 				mdl_u64_t val = 0;
 				mdl_u8_t _signed = (type&_bcit_msigned) == _bcit_msigned;
 				if (_signed) type ^= _bcit_msigned;
@@ -402,8 +447,8 @@ bci_err_t bci_exec(struct bci *__bci, mdl_u16_t __entry_addr, bci_flag_t __flags
                 if (l_signed) l_type ^= _bcit_msigned;
 				if (r_signed) r_type ^= _bcit_msigned;
 
-				bci_addr_t l_addr = get_w16(__bci);
-				bci_addr_t r_addr = get_w16(__bci);
+				bci_addr_t l_addr = get_16l(__bci);
+				bci_addr_t r_addr = get_16l(__bci);
 
 				mdl_u64_t l_val = 0, r_val = 0;
 				if (stack_get(__bci, (mdl_u8_t*)&l_val, bcit_sizeof(l_type), l_addr) != BCI_SUCCESS) goto _end;
@@ -416,7 +461,7 @@ bci_err_t bci_exec(struct bci *__bci, mdl_u16_t __entry_addr, bci_flag_t __flags
 # ifdef __DEBUG_ENABLED
 				fprintf(stdout, "l_val: %ld, r_val: %ld\n", (mdl_i64_t)l_val, (mdl_i64_t)r_val);
 # endif
-				mdl_u8_t dst_addr = get_w16(__bci);
+				mdl_u8_t dst_addr = get_16l(__bci);
 
 				mdl_u8_t flags = 0;
 				if (l_signed?(r_signed?((mdl_i64_t)l_val == (mdl_i64_t)r_val):((mdl_i64_t)l_val == r_val)):(r_signed?(l_val == (mdl_i64_t)r_val):(l_val == r_val))) flags |= _bcif_eq;
@@ -432,8 +477,8 @@ bci_err_t bci_exec(struct bci *__bci, mdl_u16_t __entry_addr, bci_flag_t __flags
 
 			case _bcii_cjmp: {
 				mdl_u8_t cond = get_8l(__bci);
-				bci_addr_t jmpm_addr = get_w16(__bci);
-				bci_addr_t flags_addr = get_w16(__bci);
+				bci_addr_t jmpm_addr = get_16l(__bci);
+				bci_addr_t flags_addr = get_16l(__bci);
 
 				bci_addr_t jmp_addr = 0;
 				if (stack_get(__bci, (mdl_u8_t*)&jmp_addr, bcit_sizeof(_bcit_addr), jmpm_addr) != BCI_SUCCESS) goto _end;
@@ -469,7 +514,7 @@ bci_err_t bci_exec(struct bci *__bci, mdl_u16_t __entry_addr, bci_flag_t __flags
 			}
 
 			case _bcii_jmp: {
-				bci_addr_t jmpm_addr = get_w16(__bci);
+				bci_addr_t jmpm_addr = get_16l(__bci);
 				bci_addr_t jmp_addr = 0;
 				if (stack_get(__bci, (mdl_u8_t*)&jmp_addr, bcit_sizeof(_bcit_addr), jmpm_addr) != BCI_SUCCESS) goto _end;
 				__bci->set_pc(jmp_addr);

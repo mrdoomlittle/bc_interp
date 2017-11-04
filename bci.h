@@ -30,6 +30,9 @@
 # define _bcii_eeb_put 0xE
 # define _bcii_act_indc 0xF
 # define _bcii_print 0x10
+# define _bcii_lop 0x11
+# define _bcii_shr 0x12
+# define _bcii_shl 0x13
 // deref addr
 # define _bcii_assign_fdr_addr 0b10000000
 
@@ -63,11 +66,15 @@
 # define _bcic_lt 0x4
 # define _bcic_leq 0x5
 # define _bcic_geq 0x6
-// aop types
+// aop kinds
 # define _bci_aop_add 0x0
 # define _bci_aop_mul 0x1
 # define _bci_aop_sub 0x2
 # define _bci_aop_div 0x3
+
+# define _bci_lop_xor 0x0
+# define _bci_lop_or 0x1
+# define _bci_lop_and 0x2
 
 # define _bcie_fsie 0b10000000
 # define _bci_fstop 0b10000000
