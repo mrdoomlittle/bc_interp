@@ -29,9 +29,10 @@ bci_addr_t get_pc() {
 //# define DEBUG_ENABLED
 # ifdef DEBUG_ENABLED
 mdl_u8_t code[] = {
-	_bcii_nop, 0x0,
-	_bcii_nop, 0x0,
-	_bcii_nop, 0x0,
+	_bcii_assign, 0x0, _bcit_8l, 0x0, 0x1, -100,
+	_bcii_assign, 0x0, _bcit_8l, 0x1, 0x0, 100,
+	_bcii_decr, 0x0, _bcit_8l|_bcit_msigned, 0x0, 0x0, _bcit_8l, 0x1,
+	_bcii_cmp, 0x0, _bcit_8l|_bcit_msigned, _bcit_8l|_bcit_msigned, 0x0, 0x0, 0x1, 0x0,
 	_bcii_exit, 0x0
 };
 # endif
@@ -77,6 +78,11 @@ void bci_printf(struct pair *__pair) {
 					ob_itr+= cc;
 					arg_p+= sizeof(mdl_u64_t);
 				break;
+				case 'd':
+					cc = sprintf(ob_itr, "%ld", *(mdl_i64_t*)arg_p);
+					ob_itr+= cc;
+					arg_p+= sizeof(mdl_i64_t);
+				break;
 			}
 			itr++;
 		} else
@@ -93,24 +99,24 @@ void* extern_call(mdl_u8_t __id, void *__arg) {
 	struct m_arg *_m_arg = (struct m_arg*)__arg;
 
 	switch(__id) {
-		case 0: {
+		case 0x0: {
 			printf("pin_mode: %u, pid: %u\n", _m_arg->pin_mode, _m_arg->pid);
 
 			break;
 		}
-		case 1: {
+		case 0x1: {
 			printf("pin_state: %u, pid: %u\n", _m_arg->pin_state, _m_arg->pid);
 			break;
 		}
-		case 2: {
+		case 0x2: {
 			printf("pid: %u\n", _m_arg->pid);
 			ret_val = ~ret_val & 0x1;
 			break;
 		}
-		case 3:
+		case 0x3:
 			usleep(*(mdl_u16_t*)__arg*1000000);
 		break;
-		case 4:
+		case 0x4:
 			bci_printf((struct pair*)__arg);
 		break;
 	}
@@ -124,6 +130,7 @@ void iei(void *__arg_p) {
 }
 
 int main(int __argc, char const *__argv[]) {
+	mdl_u16_t entry_point = 0x0;
 # ifdef DEBUG_ENABLED
 	bc = code;
 # else
@@ -132,7 +139,6 @@ int main(int __argc, char const *__argv[]) {
 		return BCI_FAILURE;
 	}
 
-	mdl_u16_t entry_point = 0x0;
 	mdl_u8_t show_stats = 0;
 	char const **arg_itr = __argv+1;
 	while(arg_itr != __argv+__argc) {
@@ -171,7 +177,9 @@ int main(int __argc, char const *__argv[]) {
 	clock_gettime(CLOCK_MONOTONIC, &end);
 
 	// ie_c = instruction execution count
+# ifndef DEBUG_ENABLED
 	if (show_stats)
+# endif
 		fprintf(stdout, "execution time: %luns, ie_c: %u\n", (end.tv_nsec-begin.tv_nsec)+((end.tv_sec-begin.tv_sec)*1000000000), ie_c);
 	bci_de_init(&_bci);
 # ifndef DEBUG_ENABLED

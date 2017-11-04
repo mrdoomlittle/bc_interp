@@ -1,6 +1,7 @@
 C_IFLAGS="-I8xdrm/inc -Imdlint/inc"
 C_LFLAGS="-L8xdrm/lib"
-DEFINES="-D__DEBUG_ENABLED"
+DEFINES=""
+#"-D__DEBUG_ENABLED"
 cd 8xdrm;
 sh compile.sh -I../mdlint/inc
 cd ../;
