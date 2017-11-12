@@ -263,7 +263,7 @@ bci_err_t bci_exec(struct bci *__bci, mdl_u16_t __entry_addr, bci_flag_t __flags
 	if (is_flag(__bci->flags, _bci_fstop)) jmpend;
 	{
 		mdl_u8_t ino = get_8l(__bci);
-		bci_flag_t flags;
+		bci_flag_t flags = 0x0;
 		get(__bci, (mdl_u8_t*)&flags, sizeof(bci_flag_t));
 		jmpto(i[ino]);
 		jmpend;
@@ -559,6 +559,7 @@ bci_err_t bci_exec(struct bci *__bci, mdl_u16_t __entry_addr, bci_flag_t __flags
 						goto _jmp;
 				break;
 			}
+			jmpdone;
 			_jmp:
 			__bci->set_pc(jmp_addr);
 			jmpdone;
