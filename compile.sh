@@ -7,7 +7,7 @@ sh compile.sh -I../mdlint/inc
 cd ../;
 
 rm -f bci.o bin/bci
-gcc -Wall -c $C_IFLAGS $DEFINES -std=c11 -o bci.o bci.c
+gcc -O0 -Wall -c $C_IFLAGS $DEFINES -std=c11 -o bci.o bci.c
 
 ar rc lib/libbci.a bci.o
 cp bci.h inc
