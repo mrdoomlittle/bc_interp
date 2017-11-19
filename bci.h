@@ -5,6 +5,7 @@
 # define BCI_FAILURE -1
 # define BCI_RUNNING 0
 # define BCI_STOPPED 1
+//# define __DEBUG_ENABLED
 # include <mdlint.h>
 # include <string.h>
 # ifndef __AVR

@@ -130,6 +130,7 @@ mdl_u8_t is_flag(bci_flag_t __flags, bci_flag_t __flag) {
 mdl_uint_t bcii_sizeof(mdl_u8_t *__p, bci_flag_t __flags) {
 	switch(*__p) {
 		case _bcii_nop: 			return 0;
+		case _bcii_exit:            return 0;
 		case _bcii_extern_call: 	return 7;
 		case _bcii_dr:				return 5;
 		case _bcii_print:			return 3;
@@ -154,10 +155,11 @@ mdl_uint_t bcii_sizeof(mdl_u8_t *__p, bci_flag_t __flags) {
 		case _bcii_cmp:				return 6;
 		case _bcii_cjmp:			return 5;
 		case _bcii_jmp:				return 2;
-		case _bcii_exit:			return 0;
 		case _bcii_conv: 			return 6;
 		case _bcii_eeb_init:		return 1;
 		case _bcii_eeb_put:			return 1+(bcit_sizeof(_bcit_addr)*2);
+		case _bcii_conv: return 2+(bcit_sizeof(_bcit_addr)*2);
+		case _bcii_shr: case _bcii_shl: return 2+bcit_sizeof(_bcit_addr)+bcit_sizeof(*(__p+4));
 		default: return 0;
 	}
 	return 0;
@@ -227,7 +229,7 @@ void _print();
 void _lop();
 void _shr_or_shl();
 
-void(*i[])() = {
+static void(*i[])() = {
 	&_nop,
 	&_exit,
 	&_assign,
@@ -359,7 +361,7 @@ bci_err_t bci_exec(struct bci *__bci, mdl_u16_t __entry_addr, bci_flag_t __flags
 
 			mdl_u64_t val = 0;
 			if (stack_get(__bci, (mdl_u8_t*)&val, bcit_sizeof(from_type), src_addr) != BCI_SUCCESS) jmpend;
-			if (ft_signed && bcit_sizeof(to_type) > bcit_sizeof(from_type) && val > (1<<(bcit_sizeof(from_type)*8))>>1)
+			if (ft_signed && bcit_sizeof(to_type) > bcit_sizeof(from_type) && val > ((mdl_u64_t)1<<(bcit_sizeof(from_type)*8))>>1)
 				val |= (~(mdl_u64_t)0)<<(bcit_sizeof(from_type)*8);
 
 			if (stack_put(__bci, (mdl_u8_t*)&val, bcit_sizeof(to_type), dst_addr) != BCI_SUCCESS) jmpend;
@@ -388,10 +390,10 @@ bci_err_t bci_exec(struct bci *__bci, mdl_u16_t __entry_addr, bci_flag_t __flags
 			if (stack_get(__bci, (mdl_u8_t*)&val, bcit_sizeof(type), addr) != BCI_SUCCESS) jmpend;
 
 			if (_signed) {
-				mdl_u64_t p = val^(val&(((mdl_i64_t)~0)<<(bcit_sizeof(type)*8)));
-				mdl_i64_t n = (mdl_i64_t)(val|(((mdl_i64_t)~0)<<(bcit_sizeof(type)*8)));
-				if (p > (1<<(bcit_sizeof(type)*8))>>1) fprintf(stdout, "%ld\n", (mdl_i64_t)n);
-				if (p < (1<<(bcit_sizeof(type)*8))>>1) fprintf(stdout, "%lu\n", p);
+				mdl_u64_t p = val^(val&(((mdl_u64_t)~0)<<(bcit_sizeof(type)*8)));
+				mdl_i64_t n = (mdl_i64_t)(val|(((mdl_u64_t)~0)<<(bcit_sizeof(type)*8)));
+				if (p > ((mdl_u64_t)1<<(bcit_sizeof(type)*8))>>1) fprintf(stdout, "%ld\n", (mdl_i64_t)n);
+				if (p < ((mdl_u64_t)1<<(bcit_sizeof(type)*8))>>1) fprintf(stdout, "%lu\n", p);
 			} else
 				fprintf(stdout, "%lu\n", val);
 			jmpdone;
@@ -508,9 +510,9 @@ bci_err_t bci_exec(struct bci *__bci, mdl_u16_t __entry_addr, bci_flag_t __flags
 			if (stack_get(__bci, (mdl_u8_t*)&l_val, bcit_sizeof(l_type), l_addr) != BCI_SUCCESS) jmpend;
 			if (stack_get(__bci, (mdl_u8_t*)&r_val, bcit_sizeof(r_type), r_addr) != BCI_SUCCESS) jmpend;
 
-			if (l_val > (1<<(bcit_sizeof(l_type)*8))>>1 && l_signed)
+			if (l_val > ((mdl_u64_t)1<<(bcit_sizeof(l_type)*8))>>1 && l_signed)
 				l_val |= (~(mdl_u64_t)0)<<(bcit_sizeof(l_type)*8);
-			if (r_val > (1<<(bcit_sizeof(r_type)*8))>>1 && r_signed)
+			if (r_val > ((mdl_u64_t)1<<(bcit_sizeof(r_type)*8))>>1 && r_signed)
 				r_val |= (~(mdl_u64_t)0)<<(bcit_sizeof(r_type)*8);
 # ifdef __DEBUG_ENABLED
 			fprintf(stdout, "l_val: %ld, r_val: %ld\n", (mdl_i64_t)l_val, (mdl_i64_t)r_val);
@@ -538,18 +540,10 @@ bci_err_t bci_exec(struct bci *__bci, mdl_u16_t __entry_addr, bci_flag_t __flags
 			mdl_u8_t flags = 0;
 			if (stack_get(__bci, &flags, 1, flags_addr) != BCI_SUCCESS) jmpend;
 			switch(cond) {
-				case _bcic_eq:
-					if (is_flag(flags, _bcif_eq)) goto _jmp;
-				break;
-				case _bcic_neq:
-					if (!is_flag(flags, _bcif_eq)) goto _jmp;
-				break;
-				case _bcic_gt:
-					if (is_flag(flags, _bcif_gt)) goto _jmp;
-				break;
-				case _bcic_lt:
-					if (is_flag(flags, _bcif_lt)) goto _jmp;
-				break;
+				case _bcic_eq: if (is_flag(flags, _bcif_eq)) goto _jmp; break;
+				case _bcic_neq: if (!is_flag(flags, _bcif_eq)) goto _jmp; break;
+				case _bcic_gt: if (is_flag(flags, _bcif_gt)) goto _jmp; break;
+				case _bcic_lt: if (is_flag(flags, _bcif_lt)) goto _jmp; break;
 				case _bcic_geq:
 					if (is_flag(flags, _bcif_gt) || is_flag(flags, _bcif_eq))
 						goto _jmp;
