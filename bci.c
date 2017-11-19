@@ -155,7 +155,6 @@ mdl_uint_t bcii_sizeof(mdl_u8_t *__p, bci_flag_t __flags) {
 		case _bcii_cmp:				return 6;
 		case _bcii_cjmp:			return 5;
 		case _bcii_jmp:				return 2;
-		case _bcii_conv: 			return 6;
 		case _bcii_eeb_init:		return 1;
 		case _bcii_eeb_put:			return 1+(bcit_sizeof(_bcit_addr)*2);
 		case _bcii_conv: return 2+(bcit_sizeof(_bcit_addr)*2);
