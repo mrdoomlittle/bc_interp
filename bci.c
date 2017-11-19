@@ -1,7 +1,7 @@
 # include "bci.h"
 bci_err_t static stack_put(struct bci *__bci, mdl_u8_t *__val, mdl_uint_t __bc, bci_addr_t __addr) {
 	if (__addr >= __bci->stack_size) {
-		fprintf(stdout, "stack_put; address 0x%02x is not within the boundary.\n", __addr);
+		fprintf(stdout, "stack_put; address 0x%04x is not within the boundary.\n", __addr);
 		return BCI_FAILURE;
 	}
 	mdl_u8_t *itr = __val;
@@ -11,7 +11,7 @@ bci_err_t static stack_put(struct bci *__bci, mdl_u8_t *__val, mdl_uint_t __bc, 
 		if (addr >= __bci->stack_size) {
 # ifdef __DEBUG_ENABLED
 			fprintf(stderr, "stack_put; failed, address out of bounds.\n");
-			fprintf(stderr, "stack_get; tryed to access memory at 0x%02x.\n", addr);
+			fprintf(stderr, "stack_get; tryed to access memory at 0x%04x.\n", addr);
 			return BCI_FAILURE;
 # endif
 		}
@@ -24,7 +24,7 @@ bci_err_t static stack_put(struct bci *__bci, mdl_u8_t *__val, mdl_uint_t __bc, 
 bci_err_t static stack_get(struct bci *__bci, mdl_u8_t *__val, mdl_uint_t __bc, bci_addr_t __addr) {
 	if (__addr >= __bci->stack_size) {
 # ifdef __DEBUG_ENABLED
-		fprintf(stderr, "stack_get; address 0x%02x is not within the boundary.\n", __addr);
+		fprintf(stderr, "stack_get; address 0x%04x is not within the boundary.\n", __addr);
 # endif
 		return BCI_FAILURE;
 	}
@@ -35,7 +35,7 @@ bci_err_t static stack_get(struct bci *__bci, mdl_u8_t *__val, mdl_uint_t __bc, 
 		if (addr >= __bci->stack_size) {
 # ifdef __DEBUG_ENABLED
 			fprintf(stderr, "stack_get; failed, address out of bounds.\n");
-			fprintf(stderr, "stack_get; tryed to access memory at 0x%02x.\n", addr);
+			fprintf(stderr, "stack_get; tryed to access memory at 0x%04x.\n", addr);
 # endif
 			return BCI_FAILURE;;
 		}
