@@ -197,6 +197,7 @@ int main(int __argc, char const *__argv[]) {
 
 	bci_err_t any_err = BCI_SUCCESS;
 	any_err = bci_init(&_bci);
+	_bci.prog_size = st.st_size;
 	bci_set_extern_fp(&_bci, &extern_call);
 	bci_set_iei_fp(&_bci, &iei);
 

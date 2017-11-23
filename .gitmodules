@@ -1,9 +1,9 @@
-[submodule "8xdrm"]
-	path = 8xdrm
-	url = git@github.com:mrdoomlittle/8xdrm.git
 [submodule "eint_t"]
 	path = eint_t
 	url = git@github.com:mrdoomlittle/eint_t.git
 [submodule "mdlint"]
 	path = mdlint
 	url = git@github.com:mrdoomlittle/mdlint.git
+[submodule "bitct"]
+	path = bitct
+	url = git@github.com:mrdoomlittle/bitct.git

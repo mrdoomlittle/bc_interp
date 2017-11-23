@@ -47,6 +47,7 @@ bci_err_t static stack_get(struct bci *__bci, mdl_u8_t *__val, mdl_uint_t __bc, 
 
 mdl_u8_t static next_byte(void *__arg_p) {
 	struct bci *_bci = (struct bci*)__arg_p;
+	if (_bci->get_pc() >= _bci->prog_size) return 0;
 	mdl_u8_t val = _bci->get_byte();
 	_bci->pc_incr();
 	return val;
@@ -76,8 +77,8 @@ bci_err_t bci_init(struct bci *__bci) {
 	if ((__bci->mem_stack = (mdl_u8_t*)malloc(__bci->stack_size)) == NULL) return BCI_FAILURE;
 	__bci->eeb_list = NULL;
 	__bci->act_indc_fp = NULL;
-	_8xdrm_init(&__bci->_8xdrm_, &next_byte, NULL);
-	set_get_arg(&__bci->_8xdrm_, (void*)__bci);
+	bitct_init(&__bci->_bitct, &next_byte, NULL);
+	set_get_arg(&__bci->_bitct, (void*)__bci);
 	memset(__bci->mem_stack, 0xFF, __bci->stack_size);
 	__bci->extern_fp = NULL;
 	__bci->iei_fp = NULL;
@@ -92,7 +93,7 @@ bci_err_t bci_de_init(struct bci *__bci) {
 }
 
 mdl_u8_t static get_lx(struct bci *__bci, mdl_u8_t __w) {
-	return _8xdrm_get_lx(&__bci->_8xdrm_, __w);
+	return bitct_get_lx(&__bci->_bitct, __w);
 }
 
 # define get_4l(__bci) get_wx(__bci, 4)

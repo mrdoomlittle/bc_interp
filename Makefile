@@ -1,4 +1,4 @@
-CFLAGS=-I../8xdrm/inc -I/usr/local/include
+CFLAGS=-Ibitct/inc -I/usr/local/include
 ARC=-DARC64
 F_CPU=16000000UL
 DEVICE=atmega328p

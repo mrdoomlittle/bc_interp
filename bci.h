@@ -13,7 +13,7 @@
 # else
 #	include <stdlib.h>
 # endif
-# include <8xdrm.h>
+# include <mdl/bitct.h>
 # define _bcii_nop 0x0
 # define _bcii_exit 0x1
 # define _bcii_assign 0x2
@@ -92,7 +92,7 @@ struct bci_eeb {
 };
 
 struct bci {
-	struct _8xdrm _8xdrm_;
+	struct bitct _bitct;
 	bci_addr_t const stack_size;
 	mdl_u8_t(*get_byte)();
 	void(*set_pc)(mdl_u16_t);
@@ -100,6 +100,7 @@ struct bci {
 	void(*pc_incr)();
 	void*(*extern_fp)(mdl_u8_t, void*);
 	mdl_u8_t *mem_stack;
+	mdl_u16_t prog_size;
 	struct bci_eeb *eeb_list;
 	void(*act_indc_fp)();
 	void(*iei_fp)(void*);
