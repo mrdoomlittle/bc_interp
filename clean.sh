@@ -1,2 +1,2 @@
 #cd 8xdrm; sh clean.sh; cd ../;
-rm -f bin/* lib/*.a inc/*.h bci.o
+rm -f bin/* lib/*.a inc/mdl/*.h bci.o
