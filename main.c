@@ -203,6 +203,16 @@ void prusage() {
    -e		entry address, format: {0000 or 0x0000}hex\n");
 }
 
+char const* exit_status_str(bci_err_t __status) {
+	switch(__status) {
+		case _bcie_success:
+			return "success";
+		case _bcie_failure:
+			return "failure";
+	}
+	return "unknown";
+}
+
 int main(int __argc, char const *__argv[]) {
 	mdl_u16_t entry_addr = 0x0000;
 # ifdef DEBUG_ENABLED
@@ -293,12 +303,12 @@ int main(int __argc, char const *__argv[]) {
 # endif
 		setlocale(LC_NUMERIC, "");
 		fprintf(stdout, "\nstatistical infomation:\n\n");
-		fprintf(stdout, "   %'10u\t\t instruction executions\n", ie_c);
-		fprintf(stdout, "   %'10u\t\t reads per second\n", rps);
+		fprintf(stdout, "   %'10u\t\t instructions executed\n", ie_c);
+		fprintf(stdout, "   %'10u\t\t reads per second - estimated\n", rps);
 		fprintf(stdout, "   %'10u\t\t no reads\n", no_rd);
-		fprintf(stdout, "   %'10u\t\t prog counter incrementations\n", ipi);
-		fprintf(stdout, "   %'10u\t\t no instruction pointer sets\n", no_ips);
-		fprintf(stdout, "   %'10u\t\t no instruction pointer gets\n", no_ipg);
+		fprintf(stdout, "   %'10u\t\t instruct pointer incrementations\n", ipi);
+		fprintf(stdout, "   %'10u\t\t no instruction pointer - sets\n", no_ips);
+		fprintf(stdout, "   %'10u\t\t no instruction pointer - gets\n", no_ipg);
 # ifndef DEBUG_ENABLED
 		fprintf(stdout, "   %'10lu\t\t file size(bytes)\n", st.st_size);
 # endif
@@ -310,7 +320,7 @@ int main(int __argc, char const *__argv[]) {
 		}
 		fprintf(stdout, "   %'10u\t\t memory written(bytes)\n", _bci.m_wr);
 		fprintf(stdout, "   %'10u\t\t memory read(bytes)\n", _bci.m_rd);
-		fprintf(stdout, "   %'10d\t\t exit status - %s \n", exit_status, exit_status == _bcie_success?"success":(exit_status == _bcie_failure?"failure":"unknown"));
+		fprintf(stdout, "   %'10d\t\t exit status - %s \n", exit_status, exit_status_str(exit_status));
 		fprintf(stdout, "\n   %'10luns   or %10lfsec\t execution time\n", ns_taken, (double)ns_taken/1000000000.0);
 //		fprintf(stdout, "execution time: %luns or %lfsec, ie_c: %u, rps: %u, no_rd: %u, no_pci: %u, no_pcs: %u, no_pcg: %u\n", ns_taken, (double)ns_taken/1000000000.0, ie_c, rps, no_rd, no_pci, no_pcs, no_pcg);
 # ifndef DEBUG_ENABLED
