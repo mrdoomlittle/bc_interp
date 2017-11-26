@@ -1,3 +1,24 @@
-bca("assign rg_32a 1019877372 bcit_32l 0");
-bca("print bcit_32l rg_32a 0");
-_exit;
+# define exit_success 0x0
+# define exit_failure 0x1
+# include <stdio.bc>
+void _delay_ms(u16_t __delay) {
+	extern_call(3, &__delay);
+}
+
+void test(u8_t __i, u8_t *__o) {
+	printf("i: %u\n", __i);
+	_delay_ms(10);
+	while(*__o != 20) {
+		_print(*__o);
+		*__o = (*__o)+1;
+	}
+}
+
+u8_t i = 0, o = 0;
+while(i != 0xFF) {
+	test(i, &o);
+	o = 0;
+	i++;
+}
+
+_exit exit_success;

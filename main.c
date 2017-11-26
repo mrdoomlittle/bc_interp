@@ -9,6 +9,7 @@
 # include <time.h>
 # include <locale.h>
 # include <errno.h>
+//# define SLICE_TEST
 # define SLICE_SHIFT 7
 # define SLICE_SIZE (1<<SLICE_SHIFT)
 # define SLICING_ENABLED 0x1
@@ -23,7 +24,7 @@ struct stat st;
 mdl_uint_t cur_slice_no = 0;
 mdl_u32_t slice_updates = 0;
 void update_slice(bci_addr_t);
-mdl_u8_t get_byte(bci_addr_t __off) {
+mdl_u8_t get_byte(bci_off_t __off) {
 	struct timespec s;
 	clock_gettime(CLOCK_MONOTONIC, &s);
 	if ((s.tv_nsec-last.tv_nsec)>SAMPLE_RATE) {
@@ -35,12 +36,15 @@ mdl_u8_t get_byte(bci_addr_t __off) {
 	no_rd++;
 	if (IS_FLAG(SLICING_ENABLED)) {
 		update_slice(__off);
-		return bc[(ip-((ip>>SLICE_SHIFT)*SLICE_SIZE))+__off];
+		bci_uint_t off = (ip+__off)-(((ip+__off)>>SLICE_SHIFT)*SLICE_SIZE);
+		mdl_u8_t ret = bc[off];
+		update_slice(0);//reset
+		return ret;
 	} else
 		return bc[ip+__off];
 }
 
-void update_slice(bci_addr_t __off) {
+void update_slice(bci_off_t __off) {
 	mdl_uint_t slice;
 	if ((slice = ((ip+__off)>>SLICE_SHIFT)) != cur_slice_no) {
 		mdl_uint_t off = slice*SLICE_SIZE;
@@ -177,7 +181,7 @@ void* extern_call(mdl_u8_t __id, void *__arg) {
 			break;
 		}
 		case 0x3:
-			usleep(*(mdl_u16_t*)__arg*1000000);
+			usleep(*(mdl_u16_t*)__arg*1000);
 		break;
 		case 0x4:
 			bci_printf((struct pair*)__arg);
@@ -195,7 +199,7 @@ void iei(void *__arg_p) {
 void prusage() {
 	fprintf(stdout, "usage: bci [options] -exec [.rbc]\n\
    -s		show statistical info\n\
-   -rdd		read delay ns, example -rdd 200\n\
+   -rdd		read delay us, example -rdd 200\n\
    -e		entry address, format: {0000 or 0x0000}hex\n");
 }
 
@@ -222,7 +226,7 @@ int main(int __argc, char const *__argv[]) {
 		else if (!strcmp(*arg_itr, "-rdd"))
 			rdd = (mdl_u32_t)strtol(*(++arg_itr), NULL, 10);
 		else if (!strcmp(*arg_itr, "-slice"))
-			flags = SLICING_ENABLED;
+			flags |= SLICING_ENABLED;
 		arg_itr++;
 	}
 
@@ -251,10 +255,22 @@ int main(int __argc, char const *__argv[]) {
 		if(!IS_FLAG(SLICING_ENABLED))
 			close(fd);
 	}
+
+# ifdef SLICE_TEST
+	bci_err_t any_err = BCI_SUCCESS;
+	bci_uint_t i = 0;
+	while(i != 4) {
+		fprintf(stdout, "--> %c\n", get_byte(1));
+		ip_incr(1);
+		i++;
+	}
+	goto _end;
+# endif
 # endif
 	clock_gettime(CLOCK_MONOTONIC, &last);
-
+# ifndef SLICE_TEST
 	bci_err_t any_err = BCI_SUCCESS;
+# endif
 	any_err = bci_init(&_bci);
 # ifndef DEBUG_ENABLED
 	*(mdl_uint_t*)&_bci.prog_size = st.st_size;
@@ -283,7 +299,9 @@ int main(int __argc, char const *__argv[]) {
 		fprintf(stdout, "   %'10u\t\t prog counter incrementations\n", ipi);
 		fprintf(stdout, "   %'10u\t\t no instruction pointer sets\n", no_ips);
 		fprintf(stdout, "   %'10u\t\t no instruction pointer gets\n", no_ipg);
+# ifndef DEBUG_ENABLED
 		fprintf(stdout, "   %'10lu\t\t file size(bytes)\n", st.st_size);
+# endif
 		fprintf(stdout, "       0x%04hx\t\t entry address\n", entry_addr);
 		fprintf(stdout, "       0x%04hx\t\t exit address\n", exit_addr);
 		if (IS_FLAG(SLICING_ENABLED)) {
@@ -299,6 +317,9 @@ int main(int __argc, char const *__argv[]) {
 	}
 # endif
 	bci_de_init(&_bci);
+# ifdef SLICE_TEST
+	_end:
+# endif
 # ifndef DEBUG_ENABLED
 	free(bc);
 	if (IS_FLAG(SLICING_ENABLED))
