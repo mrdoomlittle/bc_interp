@@ -14,6 +14,9 @@
 #	include <stdlib.h>
 # endif
 # include <mdl/bitct.h>
+# define _bcie_success 0
+# define _bcie_failure 1
+
 # define _bcii_nop 0x0
 # define _bcii_exit 0x1
 # define _bcii_assign 0x2
@@ -34,6 +37,7 @@
 # define _bcii_lop 0x11
 # define _bcii_shr 0x12
 # define _bcii_shl 0x13
+# define _bcii_la 0x14
 // deref addr
 # define _bcii_assign_fdr_addr 0b10000000
 
@@ -86,25 +90,29 @@
 typedef mdl_u8_t bci_flag_t;
 typedef mdl_u16_t bci_addr_t;
 typedef mdl_i8_t bci_err_t;
-
+typedef mdl_u16_t bci_off_t;
+typedef mdl_u16_t bci_uint_t;
 struct bci_eeb {
 	bci_addr_t b_addr, e_addr;
 };
 
 struct bci {
 	struct bitct _bitct;
-	bci_addr_t const stack_size;
-	mdl_u8_t(*get_byte)();
-	void(*set_pc)(mdl_u16_t);
-	mdl_u16_t (*get_pc)();
-	void(*pc_incr)();
+	bci_off_t ip_off;
+	bci_uint_t const stack_size;
+	mdl_u8_t(*get_byte)(bci_off_t);
+	void(*set_ip)(bci_addr_t);
+	bci_addr_t(*get_ip)();
+	void(*ip_incr)(bci_uint_t);
 	void*(*extern_fp)(mdl_u8_t, void*);
 	mdl_u8_t *mem_stack;
-	mdl_u16_t prog_size;
+	bci_uint_t const prog_size;
 	struct bci_eeb *eeb_list;
 	void(*act_indc_fp)();
 	void(*iei_fp)(void*);
 	void *iei_arg;
+	mdl_u8_t *locked_addrs;
+	mdl_uint_t m_rd, m_wr;
 	mdl_u8_t state;
 	bci_flag_t flags;
 };
@@ -117,7 +125,7 @@ mdl_uint_t bcii_sizeof(mdl_u8_t*, bci_flag_t);
 mdl_u8_t bcit_sizeof(mdl_u8_t);
 bci_err_t bci_init(struct bci*);
 bci_err_t bci_de_init(struct bci*);
-bci_err_t bci_exec(struct bci*, mdl_u16_t, bci_flag_t);
+bci_err_t bci_exec(struct bci*, bci_addr_t, bci_addr_t*, bci_err_t*, bci_flag_t);
 void bci_stop(struct bci*);
 void bci_set_extern_fp(struct bci*, void*(*)(mdl_u8_t, void*));
 void bci_set_act_indc_fp(struct bci*, void(*)());

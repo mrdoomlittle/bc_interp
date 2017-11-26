@@ -11,13 +11,19 @@ bci_err_t static stack_put(struct bci *__bci, mdl_u8_t *__val, mdl_uint_t __bc, 
 		if (addr >= __bci->stack_size) {
 # ifdef __DEBUG_ENABLED
 			fprintf(stderr, "stack_put; failed, address out of bounds.\n");
-			fprintf(stderr, "stack_get; tryed to access memory at 0x%04x.\n", addr);
+			fprintf(stderr, "stack_put; tryed to access memory at 0x%04x.\n", addr);
 			return BCI_FAILURE;
 # endif
 		}
-
-		*(__bci->mem_stack+addr) = *(itr++);
+		if ((*(__bci->locked_addrs+(addr>>3)))>>(addr-((addr>>3)*(1<<3)))&0x1) {
+# ifdef __DEBUG_ENABLED
+			fprintf(stderr, "stack_put; memory addresss at 0x%04x is locked.\n", addr);
+# endif
+			itr++;
+		} else
+			*(__bci->mem_stack+addr) = *(itr++);
 	}
+	__bci->m_wr+= __bc;
 	return BCI_SUCCESS;
 }
 
@@ -37,19 +43,24 @@ bci_err_t static stack_get(struct bci *__bci, mdl_u8_t *__val, mdl_uint_t __bc, 
 			fprintf(stderr, "stack_get; failed, address out of bounds.\n");
 			fprintf(stderr, "stack_get; tryed to access memory at 0x%04x.\n", addr);
 # endif
-			return BCI_FAILURE;;
+			return BCI_FAILURE;
 		}
-
-		*(itr++) = *(__bci->mem_stack+addr);
+		if ((*(__bci->locked_addrs+(addr>>3)))>>(addr-((addr>>3)*(1<<3)))&0x1) {
+# ifdef __DEBUG_ENABLED
+			fprintf(stderr, "stack_get; memory address at 0x%04x is locked.\n", addr);
+# endif
+			*(itr++) = 0xFF;
+		} else
+			*(itr++) = *(__bci->mem_stack+addr);
 	}
+	__bci->m_rd+= __bc;
 	return BCI_SUCCESS;
 }
 
 mdl_u8_t static next_byte(void *__arg_p) {
 	struct bci *_bci = (struct bci*)__arg_p;
-	if (_bci->get_pc() >= _bci->prog_size) return 0;
-	mdl_u8_t val = _bci->get_byte();
-	_bci->pc_incr();
+	if ((_bci->get_ip()+_bci->ip_off) >= _bci->prog_size) return 0;
+	mdl_u8_t val = _bci->get_byte(_bci->ip_off++);
 	return val;
 }
 
@@ -75,6 +86,9 @@ void bci_set_iei_arg(struct bci *__bci, void *__iei_arg) {
 
 bci_err_t bci_init(struct bci *__bci) {
 	if ((__bci->mem_stack = (mdl_u8_t*)malloc(__bci->stack_size)) == NULL) return BCI_FAILURE;
+	mdl_u16_t bytes;
+	__bci->locked_addrs = (mdl_u8_t*)malloc((bytes = ((__bci->stack_size>>3)+((__bci->stack_size-((__bci->stack_size>>3)*(1<<3)))>0))));
+	memset(__bci->locked_addrs, 0x0, bytes);
 	__bci->eeb_list = NULL;
 	__bci->act_indc_fp = NULL;
 	bitct_init(&__bci->_bitct, &next_byte, NULL);
@@ -83,11 +97,14 @@ bci_err_t bci_init(struct bci *__bci) {
 	__bci->extern_fp = NULL;
 	__bci->iei_fp = NULL;
 	__bci->flags = 0;
+	__bci->m_wr = 0;
+	__bci->m_rd = 0;
 	return BCI_SUCCESS;
 }
 
 bci_err_t bci_de_init(struct bci *__bci) {
 	free(__bci->mem_stack);
+	free(__bci->locked_addrs);
 	if (__bci->eeb_list != NULL) free(__bci->eeb_list);
 	return BCI_SUCCESS;
 }
@@ -102,7 +119,7 @@ mdl_u8_t static get_8l(struct bci *__bci) {
 }
 
 mdl_u16_t static get_16l(struct bci *__bci) {
-	mdl_u16_t ret_val = 0x00;
+	mdl_u16_t ret_val = 0x0000;
 	ret_val = get_8l(__bci);
 	ret_val |= get_8l(__bci)<<8;
 	return ret_val;
@@ -171,19 +188,19 @@ void bci_eeb_init(struct bci *__bci, mdl_u8_t __blk_c) {
 	__bci->eeb_list = (struct bci_eeb*)malloc(__blk_c*sizeof(struct bci_eeb));
 }
 
-void bci_eeb_put(struct bci *__bci, mdl_u8_t __blk_id, bci_addr_t __b_addr, bci_addr_t __e_addr) {
-	struct bci_eeb *eeb = __bci->eeb_list+__blk_id;
+void bci_eeb_put(struct bci *__bci, mdl_u8_t __blk_no, bci_addr_t __b_addr, bci_addr_t __e_addr) {
+	struct bci_eeb *eeb = __bci->eeb_list+__blk_no;
 	eeb->b_addr = __b_addr;
 	eeb->e_addr = __e_addr;
 }
 
-void bci_eeb_call(struct bci *__bci, mdl_u8_t __blk_id) {
-	struct bci_eeb *eeb = __bci->eeb_list+__blk_id;
+void bci_eeb_call(struct bci *__bci, mdl_u8_t __blk_no) {
+	struct bci_eeb *eeb = __bci->eeb_list+__blk_no;
 
 	mdl_uint_t addr = eeb->b_addr;
-	while(__bci->get_pc() != eeb->e_addr) {
-		bci_exec(__bci, addr, _bcie_fsie);
-		addr = __bci->get_pc();
+	while(__bci->get_ip() != eeb->e_addr) {
+		bci_exec(__bci, addr, NULL, NULL, _bcie_fsie);
+		addr = __bci->get_ip();
 	}
 }
 
@@ -228,6 +245,7 @@ void _act_indc();
 void _print();
 void _lop();
 void _shr_or_shl();
+void _la();
 
 static void(*i[])() = {
 	&_nop,
@@ -248,28 +266,37 @@ static void(*i[])() = {
 	&_act_indc,
 	&_print,
 	&_lop,
-	NULL,
-	NULL
+	&_shr_or_shl,
+	&_shr_or_shl,
+	&_la
 };
 
 # define jmpdone __asm__("jmp _done\nnop")
 # define jmpto(__p) __asm__("jmp *%0\nnop" : : "r"(__p))
 # define jmpnext __asm__("jmp _next\nnop")
 # define jmpend __asm__("jmp _end\nnop")
-bci_err_t bci_exec(struct bci *__bci, mdl_u16_t __entry_addr, bci_flag_t __flags) {
-	__bci->set_pc(__entry_addr);
+bci_err_t bci_exec(struct bci *__bci, bci_addr_t __entry_addr, bci_addr_t *__exit_addr, bci_err_t *__exit_status, bci_flag_t __flags) {
+	__bci->set_ip(__entry_addr);
 	__bci->state = BCI_RUNNING;
 
 	__asm__("_next:\nnop");
 	if (__bci->iei_fp != NULL) __bci->iei_fp(__bci->iei_arg);
 	if (is_flag(__bci->flags, _bci_fstop)) jmpend;
 	{
+		__bci->ip_off = 0;
 		mdl_u8_t ino = get_8l(__bci);
 		bci_flag_t flags = 0x0;
 		get(__bci, (mdl_u8_t*)&flags, sizeof(bci_flag_t));
 		jmpto(i[ino]);
 		jmpend;
-
+		__asm__("_la:\nnop"); {
+			bci_addr_t maddr = get_16l(__bci);
+			bci_addr_t addr = 0x0000;
+			if (stack_get(__bci, (mdl_u8_t*)&addr, bcit_sizeof(_bcit_addr), maddr) != BCI_SUCCESS) jmpend;
+			*(__bci->locked_addrs+(addr>>3)) |= 1<<(addr-((addr>>3)*(1<<3)));
+			printf("locked addr: %u , %u\n", addr, maddr);
+			jmpdone;
+		}
 		__asm__("_nop:\nnop");
 		// nothing
 		jmpdone;
@@ -280,10 +307,10 @@ bci_err_t bci_exec(struct bci *__bci, mdl_u16_t __entry_addr, bci_flag_t __flags
 			bci_eeb_init(__bci, get_8l(__bci));
 		jmpdone;
 		__asm__("_eeb_put:\nnop"); {
-			mdl_u8_t blk_id = get_8l(__bci);
+			mdl_u8_t blk_no = get_8l(__bci);
 			bci_addr_t b_addr = get_16l(__bci);
 			bci_addr_t e_addr = get_16l(__bci);
-			bci_eeb_put(__bci, blk_id, b_addr, e_addr);
+			bci_eeb_put(__bci, blk_no, b_addr, e_addr);
 			jmpdone;
 		}
 		__asm__("_lop:\nnop"); {
@@ -518,7 +545,6 @@ bci_err_t bci_exec(struct bci *__bci, mdl_u16_t __entry_addr, bci_flag_t __flags
 			fprintf(stdout, "l_val: %ld, r_val: %ld\n", (mdl_i64_t)l_val, (mdl_i64_t)r_val);
 # endif
 			mdl_u8_t dst_addr = get_16l(__bci);
-
 			mdl_u8_t flags = 0;
 			if (l_signed?(r_signed?((mdl_i64_t)l_val == (mdl_i64_t)r_val):((mdl_i64_t)l_val == r_val)):(r_signed?(l_val == (mdl_i64_t)r_val):(l_val == r_val))) flags |= _bcif_eq;
 			if (l_signed?(r_signed?((mdl_i64_t)l_val > (mdl_i64_t)r_val):((mdl_i64_t)l_val > r_val)):(r_signed?(l_val > (mdl_i64_t)r_val):(l_val > r_val))) flags |= _bcif_gt;
@@ -535,7 +561,7 @@ bci_err_t bci_exec(struct bci *__bci, mdl_u16_t __entry_addr, bci_flag_t __flags
 			bci_addr_t jmpm_addr = get_16l(__bci);
 			bci_addr_t flags_addr = get_16l(__bci);
 
-			bci_addr_t jmp_addr = 0;
+			bci_addr_t jmp_addr = 0x0000;
 			if (stack_get(__bci, (mdl_u8_t*)&jmp_addr, bcit_sizeof(_bcit_addr), jmpm_addr) != BCI_SUCCESS) jmpend;
 			mdl_u8_t flags = 0;
 			if (stack_get(__bci, &flags, 1, flags_addr) != BCI_SUCCESS) jmpend;
@@ -555,20 +581,31 @@ bci_err_t bci_exec(struct bci *__bci, mdl_u16_t __entry_addr, bci_flag_t __flags
 			}
 			jmpdone;
 			_jmp:
-			__bci->set_pc(jmp_addr);
-			jmpdone;
+			__bci->set_ip(jmp_addr);
+			jmpnext;
 		}
 		__asm__("_jmp:\nnop"); {
 			bci_addr_t jmpm_addr = get_16l(__bci);
-			bci_addr_t jmp_addr = 0;
+			bci_addr_t jmp_addr = 0x0000;
 			if (stack_get(__bci, (mdl_u8_t*)&jmp_addr, bcit_sizeof(_bcit_addr), jmpm_addr) != BCI_SUCCESS) jmpend;
-			__bci->set_pc(jmp_addr);
-			jmpdone;
+			__bci->set_ip(jmp_addr);
+			jmpnext;
 		}
 		// required by design
-		__asm__("_exit:\nnop"); jmpend;
+		__asm__("_exit:\nnop"); {
+			if (__exit_addr != NULL)
+				*__exit_addr = __bci->get_ip();
+			bci_addr_t addr = get_16l(__bci);
+			bci_err_t exit_status = 0x0;
+			if (__exit_status != NULL) {
+				if (stack_get(__bci, (mdl_u8_t*)&exit_status, sizeof(bci_err_t), addr) == BCI_SUCCESS)
+					*__exit_status = exit_status;
+			}
+			jmpend;
+		}
 	}
 	__asm__("_done:\nnop");
+	__bci->ip_incr(__bci->ip_off);
 	if (is_flag(__flags, _bcie_fsie)) jmpend;
 	jmpnext;
 	__bci->state = BCI_STOPPED;

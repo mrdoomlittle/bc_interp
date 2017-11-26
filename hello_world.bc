@@ -1,9 +1,8 @@
 # include <stdio.bc>
-u8_t c = 5;
-while(c != 0) {
-	printf("%u\n", c);
-	c--;
+u8_t i = 5;
+while(i != 0) {
+	_print(i);
+	i--;
 }
-
 printf("Hello World!!!\n");
-exit;
+_exit 99;
