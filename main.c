@@ -244,6 +244,12 @@ char const* exit_status_str(bci_err_t __status) {
 	return "unknown";
 }
 
+mdl_u8_t ula_guard(void *__garg, void *__arg) {
+	printf("ula guard called.\n");
+	return 0;
+}
+
+# define MAX_ARGS 20
 int main(int __argc, char const *__argv[]) {
 	mdl_u16_t entry_addr = 0x0000;
 # ifdef DEBUG_ENABLED
@@ -254,8 +260,9 @@ int main(int __argc, char const *__argv[]) {
 		return BCI_FAILURE;
 	}
 
-	mdl_u8_t show_stats = 0;
+	mdl_u8_t show_stats = 0, arg_c = 0;
 	char const *floc = NULL;
+	char *args[MAX_ARGS];
 	char const **arg_itr = __argv+1;
 	while(arg_itr != __argv+__argc) {
 		if (!strcmp(*arg_itr, "-s")) show_stats = 1;
@@ -270,6 +277,33 @@ int main(int __argc, char const *__argv[]) {
 			flags |= SLICING_ENABLED;
 		else if (!strcmp(*arg_itr, "-ss"))
 			*(bci_uint_t*)&_bci.stack_size = strtol(*(++arg_itr), NULL, 10);
+		else if (!strcmp(*arg_itr, "-args")) {
+			char **ap = args;
+			char *s = (char*)*(++arg_itr);
+			char *itr = s;
+			char *sbuf = (char*)malloc(200);
+			char *bi = sbuf;
+			mdl_u8_t is_end = 0;
+			mdl_uint_t l;
+			_another:
+			while(*itr != ',' && (is_end = (*itr != '\0'))) {
+				*(bi++) = *itr;
+				itr++;
+			}
+			*bi = '\0';
+
+			l = (itr-s)+1;
+			*ap = (char*)malloc(l);
+			memcpy(*ap, sbuf, l);
+			ap++;
+			arg_c++;
+			bi = sbuf;
+			if (is_end) {
+				itr++;
+				goto _another;
+			}
+			free(sbuf);
+		}
 		arg_itr++;
 	}
 
@@ -314,7 +348,16 @@ int main(int __argc, char const *__argv[]) {
 # ifndef SLICE_TEST
 	bci_err_t any_err = BCI_SUCCESS;
 # endif
-	any_err = bci_init(&_bci, 2);
+	any_err = bci_init(&_bci, arg_c);
+	mdl_u8_t i = 0;
+	while(i != arg_c) {
+# ifdef DEBUG_ENABLED
+		printf("setting arg{%u} to %s\n", i, args[i]);
+# endif
+		bci_set_arg(&_bci, (void*)args[i], strlen(args[i])+1, i);
+		i++;
+	}
+
 # ifndef DEBUG_ENABLED
 	*(mdl_uint_t*)&_bci.prog_size = st.st_size;
 # else
@@ -322,13 +365,16 @@ int main(int __argc, char const *__argv[]) {
 # endif
 	bci_set_extern_fp(&_bci, &extern_call);
 	bci_set_iei_fp(&_bci, &iei);
-
+	bci_set_ula_guard(&_bci, &ula_guard, NULL);
 	mdl_u16_t exit_addr;
 	bci_err_t exit_status;
 	struct timespec begin, end;
 	clock_gettime(CLOCK_MONOTONIC, &begin);
 	any_err = bci_exec(&_bci, entry_addr, &exit_addr, &exit_status, 0);
 	clock_gettime(CLOCK_MONOTONIC, &end);
+	i = 0;
+	while(i != arg_c)
+		free(bci_get_arg(&_bci, i++)->p);
 	// ie_c = instruction execution count
 	mdl_u64_t ns_taken = (end.tv_nsec-begin.tv_nsec)+((end.tv_sec-begin.tv_sec)*1000000000);
 # ifndef DEBUG_ENABLED

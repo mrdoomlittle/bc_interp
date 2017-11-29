@@ -1,27 +1,18 @@
-/*
-# define exit_success 0x0
-# define exit_failure 0x1
-# include <file_s.bc>
-# include <file.bc>
-# include <stdio.bc>
-u8_t buf[20];
+u8_t data = 212;
 
-struct file f;
-f.path = "test.bc";
-f.off = 0;
-f.buf = buf;
-f.bc = 20;
-read_file(&f);
+_bca("fld rg_16a data");
+// lock address
+_bca("la rg_16a 0x0");
 
-u8_t *p = buf;
-while(p != buf+20) {
-	printf("%c\n", *p);
-	p++;
-}*/
+_print(data); // out: 255 
 
-u8_t buf[20];
-u16_t bc;
+u8_t a = 212;
+u8_t *arg = &a;
+_bca("fld rg_16b arg");
+_bca("dr bcit_16l rg_16c rg_16b 0x0");
+// unlock address
+_bca("fld rg_16a data");
+_bca("ula rg_16a rg_16c 0x0");
 
-_get_arg(0, 0, 0);
-
-_exit exit_success;
+_print(data);
+_exit 0x0;
