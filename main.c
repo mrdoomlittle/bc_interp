@@ -31,7 +31,8 @@ mdl_u8_t get_byte(bci_off_t __off) {
 		clock_gettime(CLOCK_MONOTONIC, &last);
 		rps = ((mdl_u32_t)(1000000000.0/SAMPLE_RATE))*(no_rd-rc);
 		rc = no_rd;
-	}
+	} else if (s.tv_sec-last.tv_sec > 0)
+		clock_gettime(CLOCK_MONOTONIC, &last);
 	if (rdd > 0) usleep(rdd);
 	no_rd++;
 	if (IS_FLAG(SLICING_ENABLED)) {
@@ -62,7 +63,6 @@ void update_slice(bci_off_t __off) {
 	}
 }
 
-// pp
 void ip_incr(bci_addr_t __by) {
 	ip+=__by;
 	if (IS_FLAG(SLICING_ENABLED))
@@ -121,6 +121,13 @@ struct pair {
 	bci_addr_t p1, p2;
 } __attribute__((packed));
 
+struct file {
+	bci_addr_t path;
+	mdl_u16_t off;
+	bci_addr_t buf;
+	mdl_u16_t bc;
+} __attribute__((packed));
+
 void bci_printf(struct pair *__pair) {
 	char obuf[200];
 	mdl_u8_t *arg_p = (mdl_u8_t*)bci_resolv_addr(&_bci, __pair->p2);
@@ -132,8 +139,7 @@ void bci_printf(struct pair *__pair) {
 			switch(*itr) {
 				case 's': {
 					char *s;
-					mdl_uint_t cc;
-					cc = strlen((s = (char*)bci_resolv_addr(&_bci, *(bci_addr_t*)arg_p)));
+					mdl_uint_t cc = strlen((s = (char*)bci_resolv_addr(&_bci, *(bci_addr_t*)arg_p)));
 					strncpy(ob_itr, s, cc);
 					ob_itr+= cc;
 					arg_p+= sizeof(mdl_u64_t);
@@ -150,6 +156,10 @@ void bci_printf(struct pair *__pair) {
 				break;
 				case 'x':
 					ob_itr+= sprintf(ob_itr, "%lx", *(mdl_u64_t*)arg_p);
+					arg_p+= sizeof(mdl_u64_t);
+				break;
+				case 'p':
+					ob_itr+= sprintf(ob_itr, "0x%04lx", *(mdl_u64_t*)arg_p);
 					arg_p+= sizeof(mdl_u64_t);
 				break;
 			}
@@ -186,6 +196,25 @@ void* extern_call(mdl_u8_t __id, void *__arg) {
 		case 0x4:
 			bci_printf((struct pair*)__arg);
 		break;
+		case 0x5: {
+			mdl_uint_t cc = read(fileno(stdin), __arg, 20);
+			*((char*)__arg+cc-1) = '\0';
+			break;
+		}
+		case 0x6: {
+			struct file *f = (struct file*)__arg;
+			char *path = (char*)bci_resolv_addr(&_bci, f->path);
+			char *buf = (char*)bci_resolv_addr(&_bci, f->buf);
+
+			int fd;
+			if ((fd = open(path, O_RDONLY)) < 0)
+				fprintf(stderr, "failed to open file.\n");
+
+			lseek(fd, f->off, SEEK_SET);
+			read(fd, buf, f->bc);
+			close(fd);
+			break;
+		}
 	}
 
 	return (void*)&ret_val;
@@ -200,7 +229,9 @@ void prusage() {
 	fprintf(stdout, "usage: bci [options] -exec [.rbc]\n\
    -s		show statistical info\n\
    -rdd		read delay us, example -rdd 200\n\
-   -e		entry address, format: {0000 or 0x0000}hex\n");
+   -e		entry address, format: {0000 or 0x0000}hex\n\
+   -slice	load parts of file\n\
+   -ss		set stack size(bytes)\n");
 }
 
 char const* exit_status_str(bci_err_t __status) {
@@ -237,6 +268,8 @@ int main(int __argc, char const *__argv[]) {
 			rdd = (mdl_u32_t)strtol(*(++arg_itr), NULL, 10);
 		else if (!strcmp(*arg_itr, "-slice"))
 			flags |= SLICING_ENABLED;
+		else if (!strcmp(*arg_itr, "-ss"))
+			*(bci_uint_t*)&_bci.stack_size = strtol(*(++arg_itr), NULL, 10);
 		arg_itr++;
 	}
 
@@ -281,7 +314,7 @@ int main(int __argc, char const *__argv[]) {
 # ifndef SLICE_TEST
 	bci_err_t any_err = BCI_SUCCESS;
 # endif
-	any_err = bci_init(&_bci);
+	any_err = bci_init(&_bci, 2);
 # ifndef DEBUG_ENABLED
 	*(mdl_uint_t*)&_bci.prog_size = st.st_size;
 # else

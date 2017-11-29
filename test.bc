@@ -1,24 +1,27 @@
+/*
 # define exit_success 0x0
 # define exit_failure 0x1
+# include <file_s.bc>
+# include <file.bc>
 # include <stdio.bc>
-void _delay_ms(u16_t __delay) {
-	extern_call(3, &__delay);
-}
+u8_t buf[20];
 
-void test(u8_t __i, u8_t *__o) {
-	printf("i: %u\n", __i);
-	_delay_ms(10);
-	while(*__o != 20) {
-		_print(*__o);
-		*__o = (*__o)+1;
-	}
-}
+struct file f;
+f.path = "test.bc";
+f.off = 0;
+f.buf = buf;
+f.bc = 20;
+read_file(&f);
 
-u8_t i = 0, o = 0;
-while(i != 0xFF) {
-	test(i, &o);
-	o = 0;
-	i++;
-}
+u8_t *p = buf;
+while(p != buf+20) {
+	printf("%c\n", *p);
+	p++;
+}*/
+
+u8_t buf[20];
+u16_t bc;
+
+_get_arg(0, 0, 0);
 
 _exit exit_success;

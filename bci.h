@@ -38,6 +38,7 @@
 # define _bcii_shr 0x12
 # define _bcii_shl 0x13
 # define _bcii_la 0x14
+# define _bcii_getarg 0x15
 // deref addr
 # define _bcii_assign_fdr_addr 0b10000000
 
@@ -96,6 +97,11 @@ struct bci_eeb {
 	bci_addr_t b_addr, e_addr;
 };
 
+struct bci_arg {
+	void *p;
+	bci_uint_t bc;
+};
+
 struct bci {
 	struct bitct _bitct;
 	bci_off_t ip_off;
@@ -115,6 +121,7 @@ struct bci {
 	mdl_uint_t m_rd, m_wr;
 	mdl_u8_t state;
 	bci_flag_t flags;
+	struct bci_arg *args;
 };
 
 void* bci_resolv_addr(struct bci*, bci_addr_t);
@@ -123,7 +130,7 @@ mdl_u8_t is_flag(bci_flag_t, bci_flag_t);
 mdl_uint_t bcii_overhead_size();
 mdl_uint_t bcii_sizeof(mdl_u8_t*, bci_flag_t);
 mdl_u8_t bcit_sizeof(mdl_u8_t);
-bci_err_t bci_init(struct bci*);
+bci_err_t bci_init(struct bci*, mdl_u8_t);
 bci_err_t bci_de_init(struct bci*);
 bci_err_t bci_exec(struct bci*, bci_addr_t, bci_addr_t*, bci_err_t*, bci_flag_t);
 void bci_stop(struct bci*);

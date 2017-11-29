@@ -84,8 +84,20 @@ void bci_set_iei_arg(struct bci *__bci, void *__iei_arg) {
 	__bci->iei_arg = __iei_arg;
 }
 
-bci_err_t bci_init(struct bci *__bci) {
+void bci_set_arg(struct bci *__bci, void *__p, bci_uint_t __bc, mdl_u8_t __no) {
+	*(__bci->args+__no) = (struct bci_arg) {
+		.p = __p,
+		.bc = __bc
+	};
+}
+
+struct bci_arg *bci_get_arg(struct bci *__bci, mdl_u8_t __no) {
+	return __bci->args+__no;
+}
+
+bci_err_t bci_init(struct bci *__bci, mdl_u8_t __arg_c) {
 	if ((__bci->mem_stack = (mdl_u8_t*)malloc(__bci->stack_size)) == NULL) return BCI_FAILURE;
+	__bci->args = (struct bci_arg*)malloc(__arg_c*sizeof(struct bci_arg));
 	mdl_u16_t bytes;
 	__bci->locked_addrs = (mdl_u8_t*)malloc((bytes = ((__bci->stack_size>>3)+((__bci->stack_size-((__bci->stack_size>>3)*(1<<3)))>0))));
 	memset(__bci->locked_addrs, 0x0, bytes);
@@ -246,6 +258,7 @@ void _print();
 void _lop();
 void _shr_or_shl();
 void _la();
+void _getarg();
 
 static void(*i[])() = {
 	&_nop,
@@ -268,8 +281,17 @@ static void(*i[])() = {
 	&_lop,
 	&_shr_or_shl,
 	&_shr_or_shl,
-	&_la
+	&_la,
+	&_getarg
 };
+
+void mem_cpy(void *__dst, void *__src, mdl_uint_t __bc) {
+	mdl_u8_t *itr = (mdl_u8_t*)__src;
+	while(itr != (mdl_u8_t*)__src+__bc) {
+		*((mdl_u8_t*)__dst+(itr-(mdl_u8_t*)__src)) = *itr;
+		itr++;
+	}
+}
 
 # define jmpdone __asm__("jmp _done\nnop")
 # define jmpto(__p) __asm__("jmp *%0\nnop" : : "r"(__p))
@@ -289,6 +311,23 @@ bci_err_t bci_exec(struct bci *__bci, bci_addr_t __entry_addr, bci_addr_t *__exi
 		get(__bci, (mdl_u8_t*)&flags, sizeof(bci_flag_t));
 		jmpto(i[ino]);
 		jmpend;
+		__asm__("_getarg:\nnop"); {
+			bci_addr_t buf_maddr = get_16l(__bci);
+			bci_addr_t bc_maddr = get_16l(__bci);
+
+			bci_addr_t buf_addr = 0x0000;
+			stack_get(__bci, (mdl_u8_t*)&buf_addr, bcit_sizeof(_bcit_addr), buf_maddr);
+
+			bci_addr_t bc_addr = 0x0000;
+			stack_get(__bci, (mdl_u8_t*)&bc_addr, bcit_sizeof(_bcit_addr), bc_maddr);
+
+			mdl_u8_t *buf = (mdl_u8_t*)bci_resolv_addr(__bci, buf_addr);
+			struct bci_arg *arg = bci_get_arg(__bci, get_16l(__bci));
+		//	mem_cpy(buf, arg->p, arg->bc);
+			stack_put(__bci, (mdl_u8_t*)&arg->bc, bcit_sizeof(_bcit_16l), bc_addr);
+			jmpdone;
+		}
+
 		__asm__("_la:\nnop"); {
 			bci_addr_t maddr = get_16l(__bci);
 			bci_addr_t addr = 0x0000;
