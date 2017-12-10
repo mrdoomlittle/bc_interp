@@ -1,5 +1,5 @@
-| instruction		| info 								| hex val |
-|---    			|---    							|---
+| instruction		| info								| hex val |
+|---				|---								|---
 | _bcii_nop			| no operation						| 0x0
 | _bcii_exit		| exit program						| 0x1
 | _bcii_assign		| assign value to address			| 0x2
