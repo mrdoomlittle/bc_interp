@@ -334,7 +334,7 @@ int main(int __argc, char const *__argv[]) {
 	}
 
 # ifdef SLICE_TEST
-	bci_err_t any_err = BCI_SUCCESS;
+	bci_err_t err = BCI_SUCCESS;
 	bci_uint_t i = 0;
 	while(i != 4) {
 		fprintf(stdout, "--> %c\n", get_byte(1));
@@ -346,9 +346,9 @@ int main(int __argc, char const *__argv[]) {
 # endif
 	clock_gettime(CLOCK_MONOTONIC, &last);
 # ifndef SLICE_TEST
-	bci_err_t any_err = BCI_SUCCESS;
+	bci_err_t err = BCI_SUCCESS;
 # endif
-	any_err = bci_init(&_bci, arg_c);
+	err = bci_init(&_bci, arg_c);
 	mdl_u8_t i = 0;
 	while(i != arg_c) {
 # ifdef DEBUG_ENABLED
@@ -370,7 +370,7 @@ int main(int __argc, char const *__argv[]) {
 	bci_err_t exit_status;
 	struct timespec begin, end;
 	clock_gettime(CLOCK_MONOTONIC, &begin);
-	any_err = bci_exec(&_bci, entry_addr, &exit_addr, &exit_status, 0);
+	err = bci_exec(&_bci, entry_addr, &exit_addr, &exit_status, 0);
 	clock_gettime(CLOCK_MONOTONIC, &end);
 	i = 0;
 	while(i != arg_c)
@@ -414,5 +414,5 @@ int main(int __argc, char const *__argv[]) {
 	if (IS_FLAG(SLICING_ENABLED))
 		close(fd);
 # endif
-	return any_err;
+	return err;
 }
