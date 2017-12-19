@@ -327,15 +327,15 @@ void static mem_cpy(void *__dst, void *__src, mdl_uint_t __bc) {
 	}
 }
 
-# define jmpdone __asm__("jmp _done\nnop")
-# define jmpto(__p) __asm__("jmp *%0\nnop" : : "r"(__p))
-# define jmpnext __asm__("jmp _next\nnop")
-# define jmpend __asm__("jmp _end\nnop")
+# define jmpdone __asm__("jmp _done")
+# define jmpto(__p) __asm__("jmp *%0" : : "r"(__p))
+# define jmpnext __asm__("jmp _next")
+# define jmpend __asm__("jmp _end")
 bci_err_t bci_exec(struct bci *__bci, bci_addr_t __entry_addr, bci_addr_t *__exit_addr, bci_err_t *__exit_status, bci_flag_t __flags) {
 	__bci->set_ip(__entry_addr);
 	__bci->state = BCI_RUNNING;
 
-	__asm__("_next:\nnop");
+	__asm__("_next:");
 	if (__bci->iei_fp != NULL) __bci->iei_fp(__bci->iei_arg);
 	if (is_flag(__bci->flags, _bci_fstop)) jmpend;
 	{
@@ -343,9 +343,13 @@ bci_err_t bci_exec(struct bci *__bci, bci_addr_t __entry_addr, bci_addr_t *__exi
 		mdl_u8_t ino = get_8l(__bci);
 		bci_flag_t flags = 0x0;
 		get(__bci, (mdl_u8_t*)&flags, sizeof(bci_flag_t));
+# ifdef __AVR
+		i[ino]();
+# else
 		jmpto(i[ino]);
+# endif
 		jmpend;
-		__asm__("_ula:\nnop");
+		__asm__("_ula:");
 		{
 			bci_addr_t maddr = get_addr(__bci);
 			bci_addr_t addr;
@@ -360,7 +364,7 @@ bci_err_t bci_exec(struct bci *__bci, bci_addr_t __entry_addr, bci_addr_t *__exi
 			}
 			jmpdone;
 		}
-		__asm__("_getarg:\nnop");
+		__asm__("_getarg:");
 		{
 			bci_addr_t buf_maddr = get_addr(__bci);
 			bci_addr_t bc_maddr = get_addr(__bci);
@@ -382,7 +386,7 @@ bci_err_t bci_exec(struct bci *__bci, bci_addr_t __entry_addr, bci_addr_t *__exi
 			jmpdone;
 		}
 
-		__asm__("_la:\nnop");
+		__asm__("_la:");
 		{
 			bci_addr_t maddr = get_addr(__bci);
 			bci_addr_t addr;
@@ -391,16 +395,16 @@ bci_err_t bci_exec(struct bci *__bci, bci_addr_t __entry_addr, bci_addr_t *__exi
 			printf("locked addr: %u , %u\n", addr, maddr);
 			jmpdone;
 		}
-		__asm__("_nop:\nnop");
+		__asm__("_nop:");
 		// nothing
 		jmpdone;
-		__asm__("_act_indc:\nnop");
+		__asm__("_act_indc:");
 			if (__bci->act_indc_fp != NULL) __bci->act_indc_fp();
 		jmpdone;
-		__asm__("_eeb_init:\nnop");
+		__asm__("_eeb_init:");
 			bci_eeb_init(__bci, get_8l(__bci));
 		jmpdone;
-		__asm__("_eeb_put:\nnop");
+		__asm__("_eeb_put:");
 		{
 			mdl_u8_t blk_no = get_8l(__bci);
 			bci_addr_t b_addr = get_16l(__bci);
@@ -408,7 +412,7 @@ bci_err_t bci_exec(struct bci *__bci, bci_addr_t __entry_addr, bci_addr_t *__exi
 			bci_eeb_put(__bci, blk_no, b_addr, e_addr);
 			jmpdone;
 		}
-		__asm__("_lop:\nnop");
+		__asm__("_lop:");
 		{
 			mdl_u8_t lop_kind = get_8l(__bci);
 			mdl_u8_t type = get_8l(__bci)&0xFC;
@@ -444,7 +448,7 @@ bci_err_t bci_exec(struct bci *__bci, bci_addr_t __entry_addr, bci_addr_t *__exi
 			if (stack_put(__bci, (mdl_u8_t*)&final, bcit_sizeof(type), dst_addr) != BCI_SUCCESS) jmpend;
 			jmpdone;
 		}
-		__asm__("_shr_or_shl:\nnop");
+		__asm__("_shr_or_shl:");
 		{
 			mdl_u8_t type = get_8l(__bci)&0xFC;
 			bci_addr_t val_addr = get_addr(__bci);
@@ -460,7 +464,7 @@ bci_err_t bci_exec(struct bci *__bci, bci_addr_t __entry_addr, bci_addr_t *__exi
 			if (stack_put(__bci, (mdl_u8_t*)&val, bcit_sizeof(type), val_addr) != BCI_SUCCESS) jmpend;
 			jmpdone;
 		}
-		__asm__("_exc:\nnop");
+		__asm__("_exc:");
 		{
 			mdl_u8_t ret_type = get_8l(__bci)&0xFC;
 			bci_addr_t ret_addr = get_addr(__bci);
@@ -474,7 +478,7 @@ bci_err_t bci_exec(struct bci *__bci, bci_addr_t __entry_addr, bci_addr_t *__exi
 			}
 			jmpdone;
 		}
-		__asm__("_conv:\nnop");
+		__asm__("_conv:");
 		{
 			mdl_u8_t to_type = get_8l(__bci)&0xFC;
 			mdl_u8_t from_type = get_8l(__bci);
@@ -493,7 +497,7 @@ bci_err_t bci_exec(struct bci *__bci, bci_addr_t __entry_addr, bci_addr_t *__exi
 			if (stack_put(__bci, (mdl_u8_t*)&val, bcit_sizeof(to_type), dst_addr) != BCI_SUCCESS) jmpend;
 			jmpdone;
 		}
-		__asm__("_dr:\nnop");
+		__asm__("_dr:");
 		{
 			mdl_u8_t type = get_8l(__bci)&0xFC;
 			bci_addr_t src_addr = get_addr(__bci);
@@ -507,7 +511,7 @@ bci_err_t bci_exec(struct bci *__bci, bci_addr_t __entry_addr, bci_addr_t *__exi
 			if (stack_put(__bci, (mdl_u8_t*)&val, bcit_sizeof(type), dst_addr) != BCI_SUCCESS) jmpend;
 			jmpdone;
 		}
-		__asm__("_print:\nnop");
+		__asm__("_print:");
 		{
 			mdl_u8_t type = get_8l(__bci);
 			mdl_u8_t _signed = (type&_bcit_msigned) == _bcit_msigned;
@@ -526,7 +530,7 @@ bci_err_t bci_exec(struct bci *__bci, bci_addr_t __entry_addr, bci_addr_t *__exi
 				fprintf(stdout, "%lu\n", val);
 			jmpdone;
 		}
-		__asm__("_as:\nnop");
+		__asm__("_as:");
 		{
 			mdl_u8_t type = get_8l(__bci)&0xFC;
 			bci_addr_t addr = get_addr(__bci);
@@ -539,7 +543,7 @@ bci_err_t bci_exec(struct bci *__bci, bci_addr_t __entry_addr, bci_addr_t *__exi
 			if (stack_put(__bci, (mdl_u8_t*)&val, bcit_sizeof(type), addr) != BCI_SUCCESS) jmpend;
 			jmpdone;
 		}
-		__asm__("_aop:\nnop");
+		__asm__("_aop:");
 		{
 			mdl_u8_t aop_kind = get_8l(__bci);
 			mdl_u8_t type = get_8l(__bci);
@@ -581,7 +585,7 @@ bci_err_t bci_exec(struct bci *__bci, bci_addr_t __entry_addr, bci_addr_t *__exi
 			if (stack_put(__bci, (mdl_u8_t*)&final, bcit_sizeof(type), dst_addr) != BCI_SUCCESS) jmpend;
 			jmpdone;
 		}
-		__asm__("_mov:\nnop");
+		__asm__("_mov:");
 		{
 			mdl_u8_t type = get_8l(__bci)&0xFC;
 			bci_addr_t dst_addr = get_addr(__bci);
@@ -597,7 +601,7 @@ bci_err_t bci_exec(struct bci *__bci, bci_addr_t __entry_addr, bci_addr_t *__exi
 			if (stack_put(__bci, (mdl_u8_t*)&src_val, bcit_sizeof(type), dst_addr) != BCI_SUCCESS) jmpend;
 			jmpdone;
 		}
-		__asm__("_incr_or_decr:\nnop");
+		__asm__("_incr_or_decr:");
 		{
 			mdl_u8_t type = get_8l(__bci);
 			bci_addr_t addr = get_addr(__bci);
@@ -626,7 +630,7 @@ bci_err_t bci_exec(struct bci *__bci, bci_addr_t __entry_addr, bci_addr_t *__exi
 			if (stack_put(__bci, (mdl_u8_t*)&val, bcit_sizeof(type), addr) != BCI_SUCCESS) jmpend;
 			jmpdone;
 		}
-		__asm__("_cmp:\nnop");
+		__asm__("_cmp:");
 		{
 			mdl_u8_t l_type = get_8l(__bci);
 			mdl_u8_t r_type = get_8l(__bci);
@@ -662,7 +666,7 @@ bci_err_t bci_exec(struct bci *__bci, bci_addr_t __entry_addr, bci_addr_t *__exi
 			if (stack_put(__bci, &flags, 1, dst_addr) != BCI_SUCCESS) jmpend;
 			jmpdone;
 		}
-		__asm__("_cjmp:\nnop");
+		__asm__("_cjmp:");
 		{
 			mdl_u8_t cond = get_8l(__bci);
 			bci_addr_t jmpm_addr = get_addr(__bci);
@@ -691,7 +695,7 @@ bci_err_t bci_exec(struct bci *__bci, bci_addr_t __entry_addr, bci_addr_t *__exi
 			__bci->set_ip(jmp_addr);
 			jmpnext;
 		}
-		__asm__("_jmp:\nnop");
+		__asm__("_jmp:");
 		{
 			bci_addr_t jmpm_addr = get_addr(__bci);
 			bci_addr_t jmp_addr;
@@ -700,7 +704,7 @@ bci_err_t bci_exec(struct bci *__bci, bci_addr_t __entry_addr, bci_addr_t *__exi
 			jmpnext;
 		}
 		// required
-		__asm__("_exit:\nnop");
+		__asm__("_exit:");
 		{
 			if (__exit_addr != NULL)
 				*__exit_addr = __bci->get_ip();
@@ -713,11 +717,11 @@ bci_err_t bci_exec(struct bci *__bci, bci_addr_t __entry_addr, bci_addr_t *__exi
 			jmpend;
 		}
 	}
-	__asm__("_done:\nnop");
+	__asm__("_done:");
 	__bci->ip_incr(__bci->ip_off);
 	if (is_flag(__flags, _bcie_fsie)) jmpend;
 	jmpnext;
 	__bci->state = BCI_STOPPED;
-	__asm__("_end:\nnop");
+	__asm__("_end:");
 	return BCI_SUCCESS;
 }
