@@ -810,8 +810,8 @@ bci_err_t bci_exec(struct bci *__bci, bci_addr_t __entry_addr, bci_addr_t *__exi
 			errjmp;
 			bci_err_t exit_status = 0x0;
 			if (__exit_status != NULL) {
-				if (_err(err = stack_get(__bci, (mdl_u8_t*)&exit_status, sizeof(bci_err_t), addr)))
-					*__exit_status = exit_status;
+				if (_err(err = stack_get(__bci, (mdl_u8_t*)&exit_status, sizeof(bci_err_t), addr))) jmpend;
+				*__exit_status = exit_status;
 			}
 			jmpend;
 		}
