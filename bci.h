@@ -66,7 +66,7 @@
 # define _bcit_void 0x4
 
 // signed mask
-# define _bcit_msigned 0b00000010
+# define _bcit_msigned 0x2
 
 # define _bcif_eq 0x1
 # define _bcif_gt 0x2
@@ -91,8 +91,6 @@
 # define _bcie_fsie 0b10000000
 # define _bci_fstop 0b10000000
 
-# define _bcii_flg_dra
-
 typedef mdl_u8_t bci_flag_t;
 typedef mdl_u16_t bci_addr_t;
 typedef mdl_i8_t bci_err_t;
@@ -108,6 +106,7 @@ struct bci_arg {
 };
 
 struct bci {
+	bci_err_t err;
 	struct bitct _bitct;
 	bci_off_t ip_off;
 	bci_uint_t const stack_size;
@@ -115,12 +114,12 @@ struct bci {
 	void(*set_ip)(bci_addr_t);
 	bci_addr_t(*get_ip)();
 	void(*ip_incr)(bci_uint_t);
-	void*(*extern_fp)(mdl_u8_t, void*);
+	void*(*exc)(mdl_u8_t, void*);
 	mdl_u8_t *mem_stack;
 	bci_uint_t const prog_size;
 	struct bci_eeb *eeb_list;
-	void(*act_indc_fp)();
-	void(*iei_fp)(void*);
+	void(*act_indc)();
+	void(*iei)(void*);
 	void *iei_arg;
 
 	mdl_u8_t(*ula_guard)(void*, void*);
@@ -146,8 +145,8 @@ bci_err_t bci_init(struct bci*, mdl_u8_t);
 bci_err_t bci_de_init(struct bci*);
 bci_err_t bci_exec(struct bci*, bci_addr_t, bci_addr_t*, bci_err_t*, bci_flag_t);
 void bci_stop(struct bci*);
-void bci_set_extern_fp(struct bci*, void*(*)(mdl_u8_t, void*));
-void bci_set_act_indc_fp(struct bci*, void(*)());
-void bci_set_iei_fp(struct bci*, void(*)(void*));
+void bci_set_exc(struct bci*, void*(*)(mdl_u8_t, void*));
+void bci_set_act_indc(struct bci*, void(*)());
+void bci_set_iei(struct bci*, void(*)(void*));
 void bci_set_iei_arg(struct bci*, void*);
 # endif /*__bci__h*/

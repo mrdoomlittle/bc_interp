@@ -114,7 +114,7 @@ struct bci _bci = {
 };
 
 struct m_arg {
-	mdl_u8_t pin_mode, pin_state, pid;
+	mdl_u8_t direct, val, pid;
 } __attribute__((packed));
 
 struct pair {
@@ -172,37 +172,36 @@ void bci_printf(struct pair *__pair) {
 	fprintf(stdout, "%s", obuf);
 }
 
-void* extern_call(mdl_u8_t __id, void *__arg) {
+void* extern_call(mdl_u8_t __id, void *__arg_p) {
 	mdl_u8_t static ret_val = 0;
-	struct m_arg *_m_arg = (struct m_arg*)__arg;
+	struct m_arg *arg = (struct m_arg*)__arg_p;
 	switch(__id) {
 		case 0x0: {
-			printf("pin_mode: %u, pid: %u\n", _m_arg->pin_mode, _m_arg->pid);
-
+			printf("direct: %u, pid: %u\n", arg->direct, arg->pid);
 			break;
 		}
 		case 0x1: {
-			printf("pin_state: %u, pid: %u\n", _m_arg->pin_state, _m_arg->pid);
+			printf("val: %u, pid: %u\n", arg->val, arg->pid);
 			break;
 		}
 		case 0x2: {
-			printf("pid: %u\n", _m_arg->pid);
-			ret_val = ~ret_val & 0x1;
+			printf("pid: %u\n", arg->pid);
+			ret_val = ~ret_val&0x1;
 			break;
 		}
 		case 0x3:
-			usleep(*(mdl_u16_t*)__arg*1000);
+			usleep(*(mdl_u16_t*)__arg_p*1000);
 		break;
 		case 0x4:
-			bci_printf((struct pair*)__arg);
+			bci_printf((struct pair*)__arg_p);
 		break;
 		case 0x5: {
-			mdl_uint_t cc = read(fileno(stdin), __arg, 20);
-			*((char*)__arg+cc-1) = '\0';
+			mdl_uint_t cc = read(fileno(stdin), __arg_p, 20);
+			*((char*)__arg_p+cc-1) = '\0';
 			break;
 		}
 		case 0x6: {
-			struct file *f = (struct file*)__arg;
+			struct file *f = (struct file*)__arg_p;
 			char *path = (char*)bci_resolv_addr(&_bci, f->path);
 			char *buf = (char*)bci_resolv_addr(&_bci, f->buf);
 
@@ -216,7 +215,6 @@ void* extern_call(mdl_u8_t __id, void *__arg) {
 			break;
 		}
 	}
-
 	return (void*)&ret_val;
 }
 
@@ -363,8 +361,8 @@ int main(int __argc, char const *__argv[]) {
 # else
 	*(mdl_uint_t*)&_bci.prog_size = sizeof(code);
 # endif
-	bci_set_extern_fp(&_bci, &extern_call);
-	bci_set_iei_fp(&_bci, &iei);
+	bci_set_exc(&_bci, &extern_call);
+	bci_set_iei(&_bci, &iei);
 	bci_set_ula_guard(&_bci, &ula_guard, NULL);
 	mdl_u16_t exit_addr;
 	bci_err_t exit_status;
