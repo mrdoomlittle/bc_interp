@@ -1,6 +1,6 @@
 # include "bci.h"
-# define _err(__r) (__r != BCI_SUCCESS)
-# define _ok(__r) (__r == BCI_SUCCESS)
+# define _err(__r) ((__r) != BCI_SUCCESS)
+# define _ok(__r) ((__r) == BCI_SUCCESS)
 bci_err_t static stack_put(struct bci *__bci, mdl_u8_t *__val, mdl_uint_t __bc, bci_addr_t __addr) {
 	if (__addr >= __bci->stack_size) {
 		fprintf(stdout, "stack_put; address 0x%04x is not within the boundary.\n", __addr);
@@ -348,17 +348,14 @@ void static mem_cpy(void *__dst, void *__src, mdl_uint_t __bc) {
 	}
 }
 
-# ifdef __AVR
-# define jmpdone __asm__("rjmp _done")
-# define jmpto(__p) __asm__("ijmp" : : "z"(__p))
-# define jmpnext __asm__("rjmp _next")
-# define jmpend __asm__("rjmp _end")
-# else
 # define jmpdone __asm__("jmp _done")
-# define jmpto(__p) __asm__("jmp *%0" : : "r"(__p))
+# ifdef __AVR
+#	define jmpto(__p) __asm__("ijmp" : : "z"(__p))
+# else
+#	define jmpto(__p) __asm__("jmp *%0" : : "r"(__p))
+# endif
 # define jmpnext __asm__("jmp _next")
 # define jmpend __asm__("jmp _end")
-# endif
 # define errjmp if (_err(err)) jmpend
 bci_err_t bci_exec(struct bci *__bci, bci_addr_t __entry_addr, bci_addr_t *__exit_addr, bci_err_t *__exit_status, bci_flag_t __flags) {
 	bci_err_t err;
@@ -402,6 +399,7 @@ bci_err_t bci_exec(struct bci *__bci, bci_addr_t __entry_addr, bci_addr_t *__exi
 		}
 		__asm__("_getarg:");
 		{
+
 			bci_addr_t buf_maddr = get_addr(__bci, &err);
 			errjmp;
 			bci_addr_t bc_maddr = get_addr(__bci, &err);
@@ -426,7 +424,9 @@ bci_err_t bci_exec(struct bci *__bci, bci_addr_t __entry_addr, bci_addr_t *__exi
 				mem_cpy(buf, arg->p, arg->bc);
 				if (_err(err = stack_put(__bci, (mdl_u8_t*)&arg->bc, bcit_sizeof(_bcit_16l), bc_addr))) jmpend;
 			}
+
 			jmpdone;
+
 		}
 		__asm__("_la:");
 		{
