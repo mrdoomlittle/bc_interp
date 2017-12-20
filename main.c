@@ -63,7 +63,7 @@ void update_slice(bci_off_t __off) {
 	}
 }
 
-void ip_incr(bci_addr_t __by) {
+void ip_incr(bci_uint_t __by) {
 	ip+=__by;
 	if (IS_FLAG(SLICING_ENABLED))
 		update_slice(0);
@@ -346,7 +346,7 @@ int main(int __argc, char const *__argv[]) {
 # ifndef SLICE_TEST
 	bci_err_t err = BCI_SUCCESS;
 # endif
-	err = bci_init(&_bci, arg_c);
+	err = bci_init(&_bci, 0);
 	mdl_u8_t i = 0;
 	while(i != arg_c) {
 # ifdef DEBUG_ENABLED
@@ -370,6 +370,9 @@ int main(int __argc, char const *__argv[]) {
 	clock_gettime(CLOCK_MONOTONIC, &begin);
 	err = bci_exec(&_bci, entry_addr, &exit_addr, &exit_status, 0);
 	clock_gettime(CLOCK_MONOTONIC, &end);
+	if (err != BCI_SUCCESS) {
+		fprintf(stderr, "failed to exec.\n");
+	}
 	i = 0;
 	while(i != arg_c)
 		free(bci_get_arg(&_bci, i++)->p);

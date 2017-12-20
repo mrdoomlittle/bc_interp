@@ -94,8 +94,10 @@ struct bci_arg *bci_get_arg(struct bci *__bci, mdl_u8_t __no) {
 bci_err_t bci_init(struct bci *__bci, mdl_u8_t __arg_c) {
 	if ((__bci->mem_stack = (mdl_u8_t*)malloc(__bci->stack_size)) == NULL)
 		return BCI_FAILURE;
-	if ((__bci->args = (struct bci_arg*)malloc(__arg_c*sizeof(struct bci_arg))) == NULL)
-		return BCI_FAILURE;
+	if (__arg_c > 0) {
+		if ((__bci->args = (struct bci_arg*)malloc(__arg_c*sizeof(struct bci_arg))) == NULL)
+			return BCI_FAILURE;
+	}
 	struct bci_arg *at = __bci->args;
 	while(at != __bci->args+__arg_c)
 		*(at++) = (struct bci_arg) {.p = NULL, .bc = 0};
@@ -139,21 +141,15 @@ mdl_u8_t static get_8l(struct bci *__bci, bci_err_t *__err) {
 }
 
 mdl_u16_t static get_16l(struct bci *__bci, bci_err_t *__err) {
-	mdl_u16_t ret = ((mdl_u16_t)get_8l(__bci, __err))|((mdl_u16_t)get_8l(__bci, __err))<<8;
-	*__err = __bci->err;
-	return ret;
+	return ((mdl_u16_t)get_8l(__bci, __err))|((mdl_u16_t)get_8l(__bci, __err))<<8;
 }
 
 mdl_u32_t static get_32l(struct bci *__bci, bci_err_t *__err) {
-	mdl_u32_t ret = ((mdl_u32_t)get_16l(__bci, __err))|((mdl_u32_t)get_16l(__bci, __err))<<16;
-	*__err = __bci->err;
-	return ret;
+	return ((mdl_u32_t)get_16l(__bci, __err))|((mdl_u32_t)get_16l(__bci, __err))<<16;
 }
 
 mdl_u64_t static get_64l(struct bci *__bci, bci_err_t *__err) {
-	mdl_u64_t ret = ((mdl_u64_t)get_32l(__bci, __err))|((mdl_u64_t)get_32l(__bci, __err))<<32;
-	*__err = __bci->err;
-	return ret;
+	return ((mdl_u64_t)get_32l(__bci, __err))|((mdl_u64_t)get_32l(__bci, __err))<<32;
 }
 
 bci_addr_t static get_addr(struct bci *__bci, bci_err_t *__err) {
@@ -176,8 +172,7 @@ void static get(struct bci *__bci, mdl_u8_t *__val, mdl_uint_t __bc, bci_err_t *
 }
 
 mdl_u8_t bcit_sizeof(mdl_u8_t __type) {
-	__type ^= __type&0x3;
-	switch(__type) {
+	switch(__type^(__types&0x3)) {
 		case _bcit_void: return 0;
 		case _bcit_8l: return sizeof(mdl_u8_t);
 		case _bcit_16l: return sizeof(mdl_u16_t);
@@ -240,7 +235,6 @@ void bci_eeb_init(struct bci *__bci, mdl_u8_t __blk_c) {
 bci_err_t bci_eeb_put(struct bci *__bci, mdl_u8_t __blk_no, bci_addr_t __b_addr, bci_addr_t __e_addr) {
 	struct bci_eeb *blk = __bci->eeb_list+__blk_no;
 	if (__b_addr >= __bci->prog_size || __e_addr >= __bci->prog_size) {
-
 		return BCI_FAILURE;
 	}
 	blk->b_addr = __b_addr;
@@ -358,7 +352,7 @@ void static mem_cpy(void *__dst, void *__src, mdl_uint_t __bc) {
 # define jmpend __asm__("jmp _end")
 # define errjmp if (_err(err)) jmpend
 bci_err_t bci_exec(struct bci *__bci, bci_addr_t __entry_addr, bci_addr_t *__exit_addr, bci_err_t *__exit_status, bci_flag_t __flags) {
-	bci_err_t err;
+	bci_err_t err = BCI_SUCCESS;
 	__bci->set_ip(__entry_addr);
 	__bci->state = BCI_RUNNING;
 	__asm__("_next:");
@@ -822,8 +816,7 @@ bci_err_t bci_exec(struct bci *__bci, bci_addr_t __entry_addr, bci_addr_t *__exi
 	jmpnext;
 	__bci->state = BCI_STOPPED;
 	__asm__("_end:");
-	__bci->err = err;
-	if (_err(err))
+	if (_err(__bci->err = err))
 		return err;
 	return BCI_SUCCESS;
 }
