@@ -327,10 +327,17 @@ void static mem_cpy(void *__dst, void *__src, mdl_uint_t __bc) {
 	}
 }
 
+# ifdef __AVR
+# define jmpdone __asm__("rjmp _done")
+# define jmpto(__p) __asm__("ijmp" : : "z"(__p))
+# define jmpnext __asm__("rjmp _next")
+# define jmpend __asm__("rjmp _end")
+# else
 # define jmpdone __asm__("jmp _done")
 # define jmpto(__p) __asm__("jmp *%0" : : "r"(__p))
 # define jmpnext __asm__("jmp _next")
 # define jmpend __asm__("jmp _end")
+# endif
 bci_err_t bci_exec(struct bci *__bci, bci_addr_t __entry_addr, bci_addr_t *__exit_addr, bci_err_t *__exit_status, bci_flag_t __flags) {
 	__bci->set_ip(__entry_addr);
 	__bci->state = BCI_RUNNING;
@@ -343,11 +350,7 @@ bci_err_t bci_exec(struct bci *__bci, bci_addr_t __entry_addr, bci_addr_t *__exi
 		mdl_u8_t ino = get_8l(__bci);
 		bci_flag_t flags = 0x0;
 		get(__bci, (mdl_u8_t*)&flags, sizeof(bci_flag_t));
-# ifdef __AVR
-		i[ino]();
-# else
 		jmpto(i[ino]);
-# endif
 		jmpend;
 		__asm__("_ula:");
 		{
