@@ -172,7 +172,7 @@ void static get(struct bci *__bci, mdl_u8_t *__val, mdl_uint_t __bc, bci_err_t *
 }
 
 mdl_u8_t bcit_sizeof(mdl_u8_t __type) {
-	switch(__type^(__types&0x3)) {
+	switch(__type^(__type&0x3)) {
 		case _bcit_void: return 0;
 		case _bcit_8l: return sizeof(mdl_u8_t);
 		case _bcit_16l: return sizeof(mdl_u16_t);
