@@ -1,5 +1,5 @@
-git submodule init
-git submodule update
+git submodule init <br />
+git submodule update <br />
 
 compile: <br />
 sh compile.sh <br />
